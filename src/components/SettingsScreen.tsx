@@ -4,9 +4,11 @@ interface Props {
   language: Language;
   onLanguage: (language: Language) => void;
   onBack: () => void;
+  username: string;
+  onChangeName: () => void;
 }
 
-export default function SettingsScreen({ language, onLanguage, onBack }: Props) {
+export default function SettingsScreen({ language, onLanguage, onBack, username, onChangeName }: Props) {
   return (
     <div className="menu">
       <h2 className="step-title">{text(language, "settings")}</h2>
@@ -16,6 +18,8 @@ export default function SettingsScreen({ language, onLanguage, onBack }: Props) 
           <button key={item.code} className={`chip ${language === item.code ? "active" : ""}`} onClick={() => onLanguage(item.code)}>{item.label}</button>
         ))}
       </div>
+      <p className="subtitle">{text(language, "username")}: <b>{username}</b></p>
+      <button className="ghost" onClick={onChangeName}>{text(language, "changeName")}</button>
       <div className="wizard-nav">
         <button className="ghost" onClick={onBack}>← {text(language, "back")}</button>
       </div>

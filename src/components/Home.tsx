@@ -5,9 +5,11 @@ interface Props {
   language: Language;
   onSingleplayer: () => void;
   onSettings: () => void;
+  onLeaderboard: () => void;
+  username: string;
 }
 
-export default function Home({ language, onSingleplayer, onSettings }: Props) {
+export default function Home({ language, onSingleplayer, onSettings, onLeaderboard, username }: Props) {
   return (
     <div className="menu home">
       <motion.h1 className="title" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 200, damping: 12 }}>
@@ -15,9 +17,13 @@ export default function Home({ language, onSingleplayer, onSettings }: Props) {
         Map Trivia
       </motion.h1>
       <p className="subtitle">{text(language, "tagline")}</p>
+      <p className="greeting">👤 {username}</p>
       <nav className="home-buttons">
         <motion.button className="home-btn primary" whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={onSingleplayer}>
           {text(language, "singleplayer")}
+        </motion.button>
+        <motion.button className="home-btn" whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={onLeaderboard}>
+          🏆 {text(language, "leaderboard")}
         </motion.button>
         <motion.button className="home-btn" whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={onSettings}>
           {text(language, "settings")}

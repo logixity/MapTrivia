@@ -150,6 +150,17 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .wizard-nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 28px; }
 .play:disabled { opacity: .45; cursor: not-allowed; }
 
+.greeting { margin: -16px 0 0; color: var(--accent); font-weight: 600; }
+.name-input { width: min(100%, 320px); padding: 14px 18px; font-size: 1.2rem; text-align: center; border-radius: 14px; border: 2px solid var(--border); background: var(--card); color: var(--text); outline: none; }
+.name-input:focus { border-color: var(--accent); }
+.board { list-style: none; margin: 22px auto 0; padding: 0; width: min(100%, 480px); display: flex; flex-direction: column; gap: 6px; text-align: left; }
+.board li { display: flex; align-items: center; gap: 14px; padding: 10px 16px; border-radius: 12px; background: var(--card); border: 1px solid var(--border); }
+.board li.me { border-color: var(--accent); background: rgba(255,200,87,.12); }
+.board .rank { width: 2em; text-align: center; font-weight: 700; }
+.board-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board b { color: var(--accent); }
+.board-empty { justify-content: center; color: var(--muted); }
+
 .question { position: relative; }
 .timer { position: relative; height: 14px; margin: -12px 0 18px; background: var(--card); border-radius: 99px; overflow: hidden; }
 .timer-bar { height: 100%; background: linear-gradient(90deg, #22d3b6, #ffc857); border-radius: 99px; transition: width .1s linear; }

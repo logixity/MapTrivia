@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { animate, motion } from "framer-motion";
-import { ModeId, MODES, Settings } from "../game";
+import { MODES, MODE_KEYS, Settings } from "../game";
 import { text } from "../i18n";
+import { submitScore } from "../leaderboard";
 
 interface Props {
   settings: Settings;
+  username: string;
   score: number;
   best: number;
   correctCount: number;
@@ -12,7 +14,7 @@ interface Props {
   onMenu: () => void;
 }
 
-export default function Results({ settings, score, best, correctCount, onAgain, onMenu }: Props) {
+export default function Results({ settings, username, score, best, correctCount, onAgain, onMenu }: Props) {
   const key = `maptrivia-best-${settings.mode}`;
   const [shown, setShown] = useState(0);
   const [record] = useState(() => {
@@ -22,12 +24,16 @@ export default function Results({ settings, score, best, correctCount, onAgain, 
   });
 
   useEffect(() => {
+    submitScore(username, settings.mode, score);
+  }, [username, settings.mode, score]);
+
+  useEffect(() => {
     const controls = animate(0, score, { duration: 1.2, onUpdate: (v) => setShown(Math.round(v)) });
     return () => controls.stop();
   }, [score]);
 
   const mode = MODES.find((m) => m.id === settings.mode)!;
-  const modeKeys: Record<ModeId, string> = { "flag-country": "modeFlag", "country-capital": "modeCapital", "capital-country": "modeCapitalCountry", "country-flag": "modeCountryFlag", "draw-flag": "modeDraw", "map-country": "modeMap", "country-map": "modeCountryMap", "pin-country": "modePinCountry", "pin-capital": "modePinCapital", "pin-flag": "modePinFlag" };
+  const modeKeys = MODE_KEYS;
 
   return (
     <div className="results">

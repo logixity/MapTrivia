@@ -121,3 +121,5 @@ export function buildQuiz(settings: Settings): Question[] {
     .slice(0, settings.rounds)
     .map((t) => buildQuestion(settings.mode, t));
 }
+
+export const MODE_KEYS: Record<ModeId, string> = { "flag-country": "modeFlag", "country-capital": "modeCapital", "capital-country": "modeCapitalCountry", "country-flag": "modeCountryFlag", "draw-flag": "modeDraw", "map-country": "modeMap", "country-map": "modeCountryMap", "pin-country": "modePinCountry", "pin-capital": "modePinCapital", "pin-flag": "modePinFlag" };
