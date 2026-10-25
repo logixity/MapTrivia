@@ -1,7 +1,7 @@
 import { COUNTRIES, Continent, Country } from "./data/countries";
 import { MAPPED_CODES } from "./mapData";
 
-export type ModeId = "flag-country" | "country-capital" | "capital-country" | "country-flag" | "draw-flag" | "map-country" | "country-map";
+export type ModeId = "flag-country" | "country-capital" | "capital-country" | "country-flag" | "draw-flag" | "map-country" | "country-map" | "pin-country" | "pin-capital" | "pin-flag";
 
 export interface Mode {
   id: ModeId;
@@ -18,6 +18,9 @@ export const MODES: Mode[] = [
   { id: "draw-flag", title: "Draw the Flag", description: "Sketch it and see how close you get", icon: "✍️" },
   { id: "map-country", title: "Find on Map", description: "Locate the country from its capital", icon: "🗺️" },
   { id: "country-map", title: "Country on Map", description: "Find the named country on the map", icon: "🧭" },
+  { id: "pin-country", title: "Map to Country", description: "Name the highlighted country", icon: "📌" },
+  { id: "pin-capital", title: "Map to Capital", description: "Name the capital of the highlighted country", icon: "📌" },
+  { id: "pin-flag", title: "Map to Flag", description: "Find the flag of the highlighted country", icon: "📌" },
 ];
 
 export interface Option {
@@ -31,6 +34,7 @@ export interface Question {
   type: "choices" | "draw-flag" | "map-country";
   prompt: string;
   promptFlag?: string;
+  promptMap?: string; // country code highlighted on a map
   promptSub: string;
   options: Option[];
   answerLabel: string;
@@ -41,6 +45,7 @@ export interface Settings {
   mode: ModeId;
   continent: Continent | "All";
   rounds: number;
+  timeLimit: number; // seconds per question, 0 = unlimited
   language: import("./i18n").Language;
 }
 
@@ -78,10 +83,13 @@ function buildQuestion(mode: ModeId, target: Country): Question {
     switch (mode) {
       case "flag-country":
       case "capital-country":
+      case "pin-country":
         return { label: c.name, countryCode: c.code, correct };
       case "country-capital":
+      case "pin-capital":
         return { label: c.capital, countryCode: c.code, correct };
       case "country-flag":
+      case "pin-flag":
         return { label: c.name, flag: c.code, countryCode: c.code, correct };
     }
   };
@@ -96,12 +104,19 @@ function buildQuestion(mode: ModeId, target: Country): Question {
       return { type: "choices", prompt: target.capital, promptSub: "Which country is this the capital of?", options, answerLabel: target.name, targetCode: target.code };
     case "country-flag":
       return { type: "choices", prompt: target.name, promptSub: "Which flag is theirs?", options, answerLabel: target.name, targetCode: target.code };
+    case "pin-country":
+      return { type: "choices", prompt: "", promptMap: target.code, promptSub: "Which country is highlighted?", options, answerLabel: target.name, targetCode: target.code };
+    case "pin-capital":
+      return { type: "choices", prompt: "", promptMap: target.code, promptSub: "What is this country's capital?", options, answerLabel: target.capital, targetCode: target.code };
+    case "pin-flag":
+      return { type: "choices", prompt: "", promptMap: target.code, promptSub: "Which flag belongs to this country?", options, answerLabel: target.name, targetCode: target.code };
   }
 }
 
 export function buildQuiz(settings: Settings): Question[] {
   const all = poolFor(settings.continent);
-  const pool = settings.mode === "map-country" || settings.mode === "country-map" ? all.filter((c) => MAPPED_CODES.has(c.code)) : all;
+  const needsMap = ["map-country", "country-map", "pin-country", "pin-capital", "pin-flag"].includes(settings.mode);
+  const pool = needsMap ? all.filter((c) => MAPPED_CODES.has(c.code)) : all;
   return shuffle(pool)
     .slice(0, settings.rounds)
     .map((t) => buildQuestion(settings.mode, t));

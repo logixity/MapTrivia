@@ -24,6 +24,7 @@ const MAX_UNDO = 30;
 interface Props {
   code: string;
   onSubmit: (accuracy: number) => void;
+  timeUp?: boolean;
   clearLabel: string;
   submitLabel: string;
 }
@@ -116,7 +117,7 @@ function drawShape(context: CanvasRenderingContext2D, tool: Tool, a: Point, b: P
   else context.stroke();
 }
 
-export default function FlagCanvas({ code, onSubmit, clearLabel, submitLabel }: Props) {
+export default function FlagCanvas({ code, onSubmit, timeUp, clearLabel, submitLabel }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
   const startPoint = useRef<Point>({ x: 0, y: 0 });
@@ -275,6 +276,11 @@ export default function FlagCanvas({ code, onSubmit, clearLabel, submitLabel }: 
     image.height = 320;
     image.src = asset;
   }
+
+  useEffect(() => {
+    if (timeUp) submit();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeUp]);
 
   return (
     <div className="draw-wrap">

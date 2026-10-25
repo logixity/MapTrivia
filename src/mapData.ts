@@ -12,6 +12,7 @@ export interface MapShape {
   label: string;
   d: string;
   center: [number, number];
+  bounds: [number, number, number, number];
 }
 
 function build(): MapShape[] {
@@ -22,7 +23,7 @@ function build(): MapShape[] {
   return geo.features.map((item: Feature<Geometry, { name?: string }>) => {
     const code = item.id === undefined ? undefined : numericToAlpha2(String(item.id).padStart(3, "0"))?.toLowerCase();
     const [[x0, y0], [x1, y1]] = path.bounds(item);
-    return { code, label: item.properties?.name ?? "", d: path(item) ?? "", center: [(x0 + x1) / 2, (y0 + y1) / 2] as [number, number] };
+    return { code, label: item.properties?.name ?? "", d: path(item) ?? "", center: [(x0 + x1) / 2, (y0 + y1) / 2] as [number, number], bounds: [x0, y0, x1, y1] as [number, number, number, number] };
   }).filter((item) => item.d);
 }
 

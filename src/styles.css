@@ -149,6 +149,29 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .option-label { margin: 0; color: var(--muted); font-size: .9rem; }
 .wizard-nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 28px; }
 .play:disabled { opacity: .45; cursor: not-allowed; }
+
+.question { position: relative; }
+.timer { position: relative; height: 14px; margin: -12px 0 18px; background: var(--card); border-radius: 99px; overflow: hidden; }
+.timer-bar { height: 100%; background: linear-gradient(90deg, #22d3b6, #ffc857); border-radius: 99px; transition: width .1s linear; }
+.timer.low .timer-bar { background: linear-gradient(90deg, #ff5c7a, #ff9f43); }
+.timer.low { animation: pulse-timer .6s ease-in-out infinite; }
+.timer-num { position: absolute; inset: 0; display: grid; place-items: center; font-size: .7rem; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+@keyframes pulse-timer { 50% { box-shadow: 0 0 12px rgba(255,92,122,.8); } }
+
+.points-pop { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); z-index: 6; pointer-events: none; text-align: center; }
+.points-base { font-size: clamp(3rem, 10vw, 5rem); font-weight: 900; color: var(--accent); text-shadow: 0 4px 24px rgba(0,0,0,.7), 0 0 30px rgba(255,200,87,.6); }
+.points-fire { position: relative; margin-top: 4px; padding-top: 30px; }
+.flames { position: absolute; left: 0; right: 0; top: 0; height: 40px; }
+.flames span { position: absolute; font-size: 1.6rem; transform: translateX(-50%); filter: drop-shadow(0 0 8px #ff7a18); }
+.fire-text { position: relative; display: inline-block; font-size: clamp(1.4rem, 5vw, 2rem); font-weight: 800; background: linear-gradient(180deg, #fff3a8, #ff9f1a 55%, #ff3d00); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 10px rgba(255,120,20,.9)); animation: flicker .25s infinite alternate; }
+@keyframes flicker { from { filter: drop-shadow(0 0 8px rgba(255,120,20,.9)); transform: scale(1); } to { filter: drop-shadow(0 0 16px rgba(255,80,0,1)); transform: scale(1.05); } }
+
+.highlight-map { max-height: 40vh; margin-bottom: 8px; cursor: default; }
+.map-country.static { cursor: default; fill: #4d6560; }
+.map-country.static:hover { fill: #4d6560; filter: none; }
+.map-country.static.map-target { fill: var(--accent); }
+.map-marker.pulse { animation: marker-pulse 1s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes marker-pulse { from { transform: scale(.7); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
 .result-stats { font-size: 1.15rem; font-weight: 700; color: var(--good); }
 
 .draw-wrap { width: min(100%, 540px); margin: 20px auto 0; }
