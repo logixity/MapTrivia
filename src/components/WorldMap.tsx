@@ -1,5 +1,6 @@
 import { MouseEvent, PointerEvent, WheelEvent, useMemo, useRef, useState } from "react";
 import { Country } from "../data/countries";
+import { Language, localizedCountry } from "../i18n";
 import { MAP_H, MAP_SHAPES, MAP_W } from "../mapData";
 
 interface Props {
@@ -8,6 +9,7 @@ interface Props {
   selectedCode: string | null;
   revealed: boolean;
   onPick: (code: string) => void;
+  language: Language;
 }
 
 interface View { x: number; y: number; w: number }
@@ -21,13 +23,13 @@ function clamp(view: View): View {
   return { w, x: Math.min(MAP_W - w, Math.max(0, view.x)), y: Math.min(MAP_H - h, Math.max(0, view.y)) };
 }
 
-export default function WorldMap({ targetCode, countries, selectedCode, revealed, onPick }: Props) {
+export default function WorldMap({ targetCode, countries, selectedCode, revealed, onPick, language }: Props) {
   const [view, setView] = useState<View>(FULL);
   const svgRef = useRef<SVGSVGElement>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const gesture = useRef<{ x: number; y: number; view: View; moved: boolean; pinch?: { dist: number; w: number } } | null>(null);
   const suppressClick = useRef(false);
-  const names = useMemo(() => new Map(countries.map((country) => [country.code, country.name])), [countries]);
+  const names = useMemo(() => new Map(countries.map((country) => [country.code, localizedCountry(country.code, country.name, language)])), [countries, language]);
   const target = MAP_SHAPES.find((shape) => shape.code === targetCode);
   const viewH = (view.w * MAP_H) / MAP_W;
 

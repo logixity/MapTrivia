@@ -136,6 +136,19 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .settings-menu label { display: grid; gap: 8px; min-width: 180px; padding: 14px; margin-top: 8px; border: 1px solid var(--border); border-radius: 12px; background: #20243b; box-shadow: 0 12px 32px rgba(0,0,0,.3); }
 .settings-menu select { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); }
 .right-count { color: var(--good); font-weight: 700; }
+
+.home { padding: 24px 0; }
+.home-buttons { display: flex; flex-direction: column; gap: 14px; width: min(100%, 340px); margin: 36px auto 0; }
+.home-btn { padding: 16px 24px; font-size: 1.15rem; font-weight: 600; border-radius: 16px; border: 2px solid var(--border); background: var(--card); backdrop-filter: blur(10px); transition: border-color .2s; }
+.home-btn:hover { border-color: var(--accent); }
+.home-btn.primary { background: linear-gradient(135deg, #ffc857, #ff9f43); color: #1b1b2f; border: none; font-size: 1.3rem; }
+.step-title { font-size: clamp(1.5rem, 4vw, 2rem); margin: 8px 0 24px; }
+.steps { display: flex; gap: 8px; justify-content: center; }
+.step-dot { width: 28px; height: 6px; border-radius: 99px; background: var(--card); transition: background .2s; }
+.step-dot.on { background: var(--accent); }
+.option-label { margin: 0; color: var(--muted); font-size: .9rem; }
+.wizard-nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 28px; }
+.play:disabled { opacity: .45; cursor: not-allowed; }
 .result-stats { font-size: 1.15rem; font-weight: 700; color: var(--good); }
 
 .draw-wrap { width: min(100%, 540px); margin: 20px auto 0; }

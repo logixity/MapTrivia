@@ -1,14 +1,28 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import Menu from "./components/Menu";
+import Home from "./components/Home";
+import Singleplayer from "./components/Singleplayer";
+import SettingsScreen from "./components/SettingsScreen";
 import Game from "./components/Game";
 import Results from "./components/Results";
 import { Settings } from "./game";
+import { Language } from "./i18n";
 
-type Screen = { name: "menu" } | { name: "game"; settings: Settings } | { name: "results"; settings: Settings; score: number; best: number; correctCount: number };
+type Screen =
+  | { name: "home" }
+  | { name: "singleplayer" }
+  | { name: "settings" }
+  | { name: "game"; settings: Settings }
+  | { name: "results"; settings: Settings; score: number; best: number; correctCount: number };
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>({ name: "menu" });
+  const [screen, setScreen] = useState<Screen>({ name: "home" });
+  const [language, setLanguage] = useState<Language>(() => (localStorage.getItem("maptrivia-language") as Language) || "en");
+
+  function changeLanguage(next: Language) {
+    setLanguage(next);
+    localStorage.setItem("maptrivia-language", next);
+  }
 
   return (
     <div className="app">
@@ -24,11 +38,13 @@ export default function App() {
           exit={{ opacity: 0, y: -24 }}
           transition={{ duration: 0.3 }}
         >
-          {screen.name === "menu" && <Menu onStart={(settings) => setScreen({ name: "game", settings })} />}
+          {screen.name === "home" && <Home language={language} onSingleplayer={() => setScreen({ name: "singleplayer" })} onSettings={() => setScreen({ name: "settings" })} />}
+          {screen.name === "singleplayer" && <Singleplayer language={language} onBack={() => setScreen({ name: "home" })} onStart={(settings) => setScreen({ name: "game", settings })} />}
+          {screen.name === "settings" && <SettingsScreen language={language} onLanguage={changeLanguage} onBack={() => setScreen({ name: "home" })} />}
           {screen.name === "game" && (
             <Game
               settings={screen.settings}
-              onQuit={() => setScreen({ name: "menu" })}
+              onQuit={() => setScreen({ name: "home" })}
               onFinish={(score, best, correctCount) => setScreen({ name: "results", settings: screen.settings, score, best, correctCount })}
             />
           )}
@@ -39,7 +55,7 @@ export default function App() {
               best={screen.best}
               correctCount={screen.correctCount}
               onAgain={() => setScreen({ name: "game", settings: screen.settings })}
-              onMenu={() => setScreen({ name: "menu" })}
+              onMenu={() => setScreen({ name: "home" })}
             />
           )}
         </motion.main>
