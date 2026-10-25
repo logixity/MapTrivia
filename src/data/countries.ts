@@ -1,0 +1,138 @@
+export interface Country {
+  code: string; // ISO 3166-1 alpha-2, lowercase (matches flag-icons)
+  name: string;
+  capital: string;
+  continent: Continent;
+}
+
+export type Continent = "Europe" | "Asia" | "Africa" | "North America" | "South America" | "Oceania";
+
+export const CONTINENTS: Continent[] = ["Europe", "Asia", "Africa", "North America", "South America", "Oceania"];
+
+const E: Continent = "Europe";
+const A: Continent = "Asia";
+const F: Continent = "Africa";
+const N: Continent = "North America";
+const S: Continent = "South America";
+const O: Continent = "Oceania";
+
+export const COUNTRIES: Country[] = [
+  // Europe
+  { code: "al", name: "Albania", capital: "Tirana", continent: E },
+  { code: "at", name: "Austria", capital: "Vienna", continent: E },
+  { code: "be", name: "Belgium", capital: "Brussels", continent: E },
+  { code: "ba", name: "Bosnia and Herzegovina", capital: "Sarajevo", continent: E },
+  { code: "bg", name: "Bulgaria", capital: "Sofia", continent: E },
+  { code: "hr", name: "Croatia", capital: "Zagreb", continent: E },
+  { code: "cz", name: "Czechia", capital: "Prague", continent: E },
+  { code: "dk", name: "Denmark", capital: "Copenhagen", continent: E },
+  { code: "ee", name: "Estonia", capital: "Tallinn", continent: E },
+  { code: "fi", name: "Finland", capital: "Helsinki", continent: E },
+  { code: "fr", name: "France", capital: "Paris", continent: E },
+  { code: "de", name: "Germany", capital: "Berlin", continent: E },
+  { code: "gr", name: "Greece", capital: "Athens", continent: E },
+  { code: "hu", name: "Hungary", capital: "Budapest", continent: E },
+  { code: "is", name: "Iceland", capital: "Reykjavik", continent: E },
+  { code: "ie", name: "Ireland", capital: "Dublin", continent: E },
+  { code: "it", name: "Italy", capital: "Rome", continent: E },
+  { code: "lv", name: "Latvia", capital: "Riga", continent: E },
+  { code: "lt", name: "Lithuania", capital: "Vilnius", continent: E },
+  { code: "lu", name: "Luxembourg", capital: "Luxembourg", continent: E },
+  { code: "nl", name: "Netherlands", capital: "Amsterdam", continent: E },
+  { code: "no", name: "Norway", capital: "Oslo", continent: E },
+  { code: "pl", name: "Poland", capital: "Warsaw", continent: E },
+  { code: "pt", name: "Portugal", capital: "Lisbon", continent: E },
+  { code: "ro", name: "Romania", capital: "Bucharest", continent: E },
+  { code: "rs", name: "Serbia", capital: "Belgrade", continent: E },
+  { code: "sk", name: "Slovakia", capital: "Bratislava", continent: E },
+  { code: "si", name: "Slovenia", capital: "Ljubljana", continent: E },
+  { code: "es", name: "Spain", capital: "Madrid", continent: E },
+  { code: "se", name: "Sweden", capital: "Stockholm", continent: E },
+  { code: "ch", name: "Switzerland", capital: "Bern", continent: E },
+  { code: "ua", name: "Ukraine", capital: "Kyiv", continent: E },
+  { code: "gb", name: "United Kingdom", capital: "London", continent: E },
+  // Asia
+  { code: "am", name: "Armenia", capital: "Yerevan", continent: A },
+  { code: "bd", name: "Bangladesh", capital: "Dhaka", continent: A },
+  { code: "cn", name: "China", capital: "Beijing", continent: A },
+  { code: "ge", name: "Georgia", capital: "Tbilisi", continent: A },
+  { code: "in", name: "India", capital: "New Delhi", continent: A },
+  { code: "id", name: "Indonesia", capital: "Jakarta", continent: A },
+  { code: "ir", name: "Iran", capital: "Tehran", continent: A },
+  { code: "iq", name: "Iraq", capital: "Baghdad", continent: A },
+  { code: "il", name: "Israel", capital: "Jerusalem", continent: A },
+  { code: "jp", name: "Japan", capital: "Tokyo", continent: A },
+  { code: "jo", name: "Jordan", capital: "Amman", continent: A },
+  { code: "kz", name: "Kazakhstan", capital: "Astana", continent: A },
+  { code: "kw", name: "Kuwait", capital: "Kuwait City", continent: A },
+  { code: "lb", name: "Lebanon", capital: "Beirut", continent: A },
+  { code: "my", name: "Malaysia", capital: "Kuala Lumpur", continent: A },
+  { code: "mn", name: "Mongolia", capital: "Ulaanbaatar", continent: A },
+  { code: "np", name: "Nepal", capital: "Kathmandu", continent: A },
+  { code: "pk", name: "Pakistan", capital: "Islamabad", continent: A },
+  { code: "ph", name: "Philippines", capital: "Manila", continent: A },
+  { code: "qa", name: "Qatar", capital: "Doha", continent: A },
+  { code: "sa", name: "Saudi Arabia", capital: "Riyadh", continent: A },
+  { code: "sg", name: "Singapore", capital: "Singapore", continent: A },
+  { code: "kr", name: "South Korea", capital: "Seoul", continent: A },
+  { code: "lk", name: "Sri Lanka", capital: "Colombo", continent: A },
+  { code: "th", name: "Thailand", capital: "Bangkok", continent: A },
+  { code: "tr", name: "Turkey", capital: "Ankara", continent: A },
+  { code: "ae", name: "United Arab Emirates", capital: "Abu Dhabi", continent: A },
+  { code: "vn", name: "Vietnam", capital: "Hanoi", continent: A },
+  // Africa
+  { code: "dz", name: "Algeria", capital: "Algiers", continent: F },
+  { code: "ao", name: "Angola", capital: "Luanda", continent: F },
+  { code: "cm", name: "Cameroon", capital: "Yaoundé", continent: F },
+  { code: "eg", name: "Egypt", capital: "Cairo", continent: F },
+  { code: "et", name: "Ethiopia", capital: "Addis Ababa", continent: F },
+  { code: "gh", name: "Ghana", capital: "Accra", continent: F },
+  { code: "ke", name: "Kenya", capital: "Nairobi", continent: F },
+  { code: "ly", name: "Libya", capital: "Tripoli", continent: F },
+  { code: "mg", name: "Madagascar", capital: "Antananarivo", continent: F },
+  { code: "ma", name: "Morocco", capital: "Rabat", continent: F },
+  { code: "mz", name: "Mozambique", capital: "Maputo", continent: F },
+  { code: "na", name: "Namibia", capital: "Windhoek", continent: F },
+  { code: "ng", name: "Nigeria", capital: "Abuja", continent: F },
+  { code: "rw", name: "Rwanda", capital: "Kigali", continent: F },
+  { code: "sn", name: "Senegal", capital: "Dakar", continent: F },
+  { code: "za", name: "South Africa", capital: "Pretoria", continent: F },
+  { code: "sd", name: "Sudan", capital: "Khartoum", continent: F },
+  { code: "tz", name: "Tanzania", capital: "Dodoma", continent: F },
+  { code: "tn", name: "Tunisia", capital: "Tunis", continent: F },
+  { code: "ug", name: "Uganda", capital: "Kampala", continent: F },
+  { code: "zm", name: "Zambia", capital: "Lusaka", continent: F },
+  { code: "zw", name: "Zimbabwe", capital: "Harare", continent: F },
+  // North America
+  { code: "ca", name: "Canada", capital: "Ottawa", continent: N },
+  { code: "cr", name: "Costa Rica", capital: "San José", continent: N },
+  { code: "cu", name: "Cuba", capital: "Havana", continent: N },
+  { code: "do", name: "Dominican Republic", capital: "Santo Domingo", continent: N },
+  { code: "sv", name: "El Salvador", capital: "San Salvador", continent: N },
+  { code: "gt", name: "Guatemala", capital: "Guatemala City", continent: N },
+  { code: "ht", name: "Haiti", capital: "Port-au-Prince", continent: N },
+  { code: "hn", name: "Honduras", capital: "Tegucigalpa", continent: N },
+  { code: "jm", name: "Jamaica", capital: "Kingston", continent: N },
+  { code: "mx", name: "Mexico", capital: "Mexico City", continent: N },
+  { code: "ni", name: "Nicaragua", capital: "Managua", continent: N },
+  { code: "pa", name: "Panama", capital: "Panama City", continent: N },
+  { code: "us", name: "United States", capital: "Washington, D.C.", continent: N },
+  // South America
+  { code: "ar", name: "Argentina", capital: "Buenos Aires", continent: S },
+  { code: "bo", name: "Bolivia", capital: "Sucre", continent: S },
+  { code: "br", name: "Brazil", capital: "Brasília", continent: S },
+  { code: "cl", name: "Chile", capital: "Santiago", continent: S },
+  { code: "co", name: "Colombia", capital: "Bogotá", continent: S },
+  { code: "ec", name: "Ecuador", capital: "Quito", continent: S },
+  { code: "py", name: "Paraguay", capital: "Asunción", continent: S },
+  { code: "pe", name: "Peru", capital: "Lima", continent: S },
+  { code: "uy", name: "Uruguay", capital: "Montevideo", continent: S },
+  { code: "ve", name: "Venezuela", capital: "Caracas", continent: S },
+  // Oceania
+  { code: "au", name: "Australia", capital: "Canberra", continent: O },
+  { code: "fj", name: "Fiji", capital: "Suva", continent: O },
+  { code: "nz", name: "New Zealand", capital: "Wellington", continent: O },
+  { code: "pg", name: "Papua New Guinea", capital: "Port Moresby", continent: O },
+  { code: "ws", name: "Samoa", capital: "Apia", continent: O },
+  { code: "to", name: "Tonga", capital: "Nukuʻalofa", continent: O },
+];
