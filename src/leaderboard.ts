@@ -31,7 +31,8 @@ export async function submitScore(name: string, mode: ModeId, score: number): Pr
   all[mode][name] = Math.max(all[mode][name] ?? 0, score);
   localStorage.setItem(LOCAL_KEY, JSON.stringify(all));
   try {
-    await fetch("/api/scores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, mode, score }) });
+    const response = await fetch("/api/scores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, mode, score }) });
+    if (!response.ok) console.warn("Score upload failed:", response.status, await response.text());
   } catch {
     // Offline or no backend: the local copy above is enough.
   }
