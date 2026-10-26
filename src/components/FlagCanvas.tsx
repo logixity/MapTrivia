@@ -1,4 +1,5 @@
 import { PointerEvent, useEffect, useRef, useState } from "react";
+import { WHITE, classify, scoreFlag } from "../flagScore";
 
 const flagImages = import.meta.glob("../../node_modules/flag-icons/flags/4x3/*.svg", {
   eager: true,
@@ -255,20 +256,14 @@ export default function FlagCanvas({ code, onSubmit, timeUp, clearLabel, submitL
       refContext.drawImage(image, 0, 0, w, h);
       const drawContext = make();
       drawContext.drawImage(canvas, 0, 0, w, h);
-      const expected = refContext.getImageData(0, 0, w, h).data;
-      const actual = drawContext.getImageData(0, 0, w, h).data;
-      let hit = 0;
-      let blankHit = 0;
-      for (let i = 0; i < expected.length; i += 4) {
-        const diff = Math.abs(expected[i] - actual[i]) + Math.abs(expected[i + 1] - actual[i + 1]) + Math.abs(expected[i + 2] - actual[i + 2]);
-        const blank = Math.abs(expected[i] - 255) + Math.abs(expected[i + 1] - 255) + Math.abs(expected[i + 2] - 255);
-        if (diff < 150) hit++;
-        if (blank < 150) blankHit++;
-      }
-      const total = w * h;
+      const expected = classify(refContext.getImageData(0, 0, w, h).data);
+      const actual = classify(drawContext.getImageData(0, 0, w, h).data);
+      const blank = new Uint8Array(w * h);
+      blank.fill(WHITE);
+      const raw = scoreFlag(expected, actual, w, h);
+      const floor = scoreFlag(expected, blank, w, h);
       // Score the gain over a blank canvas, so mostly-white flags can't be gamed by drawing nothing.
-      const base = blankHit / total;
-      const accuracy = base >= 0.999 ? hit / total : (hit / total - base) / (1 - base);
+      const accuracy = floor >= 0.999 ? raw : (raw - floor) / (1 - floor);
       onSubmit(Math.max(0, Math.min(100, Math.round(accuracy * 100))));
     };
     image.onerror = () => onSubmit(0);

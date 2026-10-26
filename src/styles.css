@@ -305,12 +305,12 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .streak-flame { position: relative; width: 240px; height: 200px; margin: 0 auto; }
 .streak-rays { position: absolute; left: 50%; top: 52px; width: 0; height: 0; }
 .streak-rays span { position: absolute; left: -3px; top: -90px; width: 6px; height: 56px; border-radius: 4px; background: linear-gradient(180deg, rgba(255,200,87,.9), rgba(255,200,87,0)); transform-origin: 3px 90px; }
-.streak-icon { position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 110px; height: 110px; display: grid; place-items: center; }
+.streak-icon { position: absolute; left: 0; right: 0; margin: 0 auto; top: 0; width: 110px; height: 110px; display: grid; place-items: center; }
 .streak-emoji { font-size: 6.5rem; line-height: 1; filter: drop-shadow(0 0 22px rgba(255,110,20,.95)); }
 .streak-flame.big .streak-emoji { font-size: 7.5rem; filter: drop-shadow(0 0 34px rgba(255,70,0,1)); }
 .streak-number { position: absolute; bottom: 4px; font-size: 2.6rem; font-weight: 900; color: #fff; -webkit-text-stroke: 3px #c2410c; paint-order: stroke fill; text-shadow: 0 3px 10px rgba(0,0,0,.5); }
 .streak-embers { position: absolute; left: 0; right: 0; top: 40px; height: 60px; }
-.streak-embers span { position: absolute; font-size: 1.1rem; transform: translateX(-50%); }
+.streak-embers span { position: absolute; font-size: 1.1rem; margin-left: -.55rem; }
 .streak-text { position: absolute; left: 0; right: 0; top: 140px; font-size: clamp(1.2rem, 4.5vw, 1.7rem); font-weight: 900; background: linear-gradient(180deg, #fff3a8, #ff9f1a 55%, #ff3d00); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 10px rgba(255,120,20,.8)); }
 
 .version { position: fixed; bottom: 10px; left: 0; right: 0; text-align: center; color: var(--muted); font-size: .8rem; opacity: .7; pointer-events: none; }
