@@ -1,6 +1,6 @@
 // Vercel serverless function for multiplayer duels. Uses the same Redis database as the leaderboard (REDIS_URL).
 import { createClient } from "redis";
-import { handleDuel, Store } from "./_duel";
+import { handleDuel, Store } from "./_duel.js";
 
 interface Req { method?: string; body?: unknown }
 interface Res { status(code: number): Res; json(body: unknown): void }

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { CONTINENTS } from "../data/countries";
-import { ModeId, Settings } from "../game";
+import { ModeId, Settings, leaderboardEligible } from "../game";
 import { Language, continentName, text } from "../i18n";
 
 const TIME_OPTIONS = [10, 15, 30, 60, 0];
@@ -54,9 +54,10 @@ interface Props {
   onStart: (settings: Settings) => void;
   onBack: () => void;
   finishLabel?: string;
+  showEligibility?: boolean;
 }
 
-export default function Singleplayer({ language, onStart, onBack, finishLabel }: Props) {
+export default function Singleplayer({ language, onStart, onBack, finishLabel, showEligibility }: Props) {
   const [step, setStep] = useState(0);
   const [guess, setGuess] = useState<Guess | null>(null);
   const [mode, setMode] = useState<ModeId | null>(null);
@@ -129,6 +130,8 @@ export default function Singleplayer({ language, onStart, onBack, finishLabel }:
           </div>
         </div>
       )}
+
+      {step === 2 && showEligibility && !leaderboardEligible({ continent, timeLimit }) && <p className="notice">{text(language, "notEligible")}</p>}
 
       <div className="wizard-nav">
         <button className="ghost" onClick={back}>← {text(language, "back")}</button>

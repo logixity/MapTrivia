@@ -74,7 +74,7 @@ export default function App() {
           {screen.name === "name" && <NameScreen language={language} initial={username} onSave={(name) => { setUsername(name); localStorage.setItem("maptrivia-username", name); setScreen({ name: "home" }); }} />}
           {screen.name === "leaderboard" && <Leaderboard language={language} username={username} onBack={() => setScreen({ name: "home" })} />}
           {screen.name === "home" && <Home language={language} username={username} onLeaderboard={() => setScreen({ name: "leaderboard" })} onSingleplayer={() => setScreen({ name: "singleplayer" })} onMultiplayer={() => setScreen({ name: "multiplayer" })} onSettings={() => setScreen({ name: "settings" })} />}
-          {screen.name === "singleplayer" && <Singleplayer language={language} onBack={() => setScreen({ name: "home" })} onStart={(settings) => setScreen({ name: "game", settings })} />}
+          {screen.name === "singleplayer" && <Singleplayer showEligibility language={language} onBack={() => setScreen({ name: "home" })} onStart={(settings) => setScreen({ name: "game", settings })} />}
           {screen.name === "multiplayer" && <Multiplayer language={language} available={presence.available} onDuel={() => setScreen({ name: "duelsetup", send: false })} onSendDuel={() => setScreen({ name: "duelsetup", send: true })} onBack={() => setScreen({ name: "home" })} />}
           {screen.name === "duelsetup" && (
             <Singleplayer

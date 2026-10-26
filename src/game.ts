@@ -136,3 +136,9 @@ export function buildQuiz(settings: Settings): Question[] {
 }
 
 export const MODE_KEYS: Record<ModeId, string> = { "flag-country": "modeFlag", "country-capital": "modeCapital", "capital-country": "modeCapitalCountry", "country-flag": "modeCountryFlag", "draw-flag": "modeDraw", "map-country": "modeMap", "country-map": "modeCountryMap", "pin-country": "modePinCountry", "pin-capital": "modePinCapital", "pin-flag": "modePinFlag" };
+
+export const LEADERBOARD_TIME_LIMIT = 15;
+
+export function leaderboardEligible(settings: Pick<Settings, "continent" | "timeLimit">): boolean {
+  return settings.continent === "All" && settings.timeLimit === LEADERBOARD_TIME_LIMIT;
+}

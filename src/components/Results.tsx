@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { animate, motion } from "framer-motion";
-import { MODES, MODE_KEYS, Settings } from "../game";
+import { MODES, MODE_KEYS, Settings, leaderboardEligible } from "../game";
 import Burst from "./Burst";
 import { text } from "../i18n";
 import { submitScore } from "../leaderboard";
@@ -17,6 +17,7 @@ interface Props {
 
 export default function Results({ settings, username, score, best, correctCount, onAgain, onMenu }: Props) {
   const key = `maptrivia-best-${settings.mode}`;
+  const eligible = leaderboardEligible(settings);
   const [shown, setShown] = useState(0);
   const [record] = useState(() => {
     const prev = Number(localStorage.getItem(key) ?? 0);
@@ -25,8 +26,8 @@ export default function Results({ settings, username, score, best, correctCount,
   });
 
   useEffect(() => {
-    submitScore(username, settings.mode, score);
-  }, [username, settings.mode, score]);
+    if (eligible) submitScore(username, settings.mode, score);
+  }, [username, settings.mode, score, eligible]);
 
   useEffect(() => {
     const controls = animate(0, score, { duration: 1.2, onUpdate: (v) => setShown(Math.round(v)) });
@@ -47,6 +48,7 @@ export default function Results({ settings, username, score, best, correctCount,
       <div className="final-score">{shown}</div>
       <p className="result-stats">✓ {correctCount}</p>
       <p className="subtitle">{text(settings.language, "bestStreak")}: {best} · {text(settings.language, "personalBest")}: {Math.max(record.prev, score)}</p>
+      {!eligible && <p className="notice">{text(settings.language, "notEligible")}</p>}
       <div className="results-actions">
         <motion.button className="play" whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.95 }} onClick={onAgain}>
           {text(settings.language, "again")}
