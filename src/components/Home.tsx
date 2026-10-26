@@ -33,6 +33,7 @@ export default function Home({ language, onSingleplayer, onSettings, onLeaderboa
           {text(language, "settings")}
         </motion.button>
       </nav>
+      <p className="version">v{__APP_VERSION__}</p>
     </div>
   );
 }

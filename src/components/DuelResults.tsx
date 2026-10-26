@@ -17,6 +17,7 @@ interface Props {
 
 export default function DuelResults({ language, you, opponent, matchId, score, correct, onMenu }: Props) {
   const [theirs, setTheirs] = useState<Progress | null>(null);
+  const [mine, setMine] = useState<Progress | null>(null);
   const [forfeit, setForfeit] = useState(false);
   const [decided, setDecided] = useState(false);
 
@@ -25,9 +26,10 @@ export default function DuelResults({ language, you, opponent, matchId, score, c
     let stopped = false;
     async function sync() {
       try {
-        const data = await duelApi<{ opponent: Progress | null; sinceStart: number }>("sync", { matchId, progress: { correct, score, lives: 0, finished: true } });
+        const data = await duelApi<{ me: Progress; opponent: Progress | null; sinceStart: number }>("sync", { matchId, progress: { correct, score, lives: 0, finished: true } });
         if (stopped) return;
         setTheirs(data.opponent);
+        setMine(data.me);
         if (data.opponent?.finished) setDecided(true);
         else if ((data.opponent?.age ?? data.sinceStart) > FORFEIT_AFTER_MS) {
           setForfeit(true);
@@ -45,8 +47,8 @@ export default function DuelResults({ language, you, opponent, matchId, score, c
     };
   }, [matchId, correct, score, decided]);
 
-  // Surviving longer means more correct answers before the third life is lost; score breaks ties.
-  const outcome = !decided ? null : forfeit || !theirs ? "win" : correct !== theirs.correct ? (correct > theirs.correct ? "win" : "lose") : score !== theirs.score ? (score > theirs.score ? "win" : "lose") : "draw";
+  // Whoever runs out of lives first loses; the other player is sent here the moment that happens.
+  const outcome = !decided ? null : forfeit || !theirs ? "win" : mine?.finishedAt && theirs.finishedAt && mine.finishedAt !== theirs.finishedAt ? (mine.finishedAt > theirs.finishedAt ? "win" : "lose") : correct !== theirs.correct ? (correct > theirs.correct ? "win" : "lose") : score !== theirs.score ? (score > theirs.score ? "win" : "lose") : "draw";
   const icon = outcome === "win" ? "🏆" : outcome === "lose" ? "💀" : outcome === "draw" ? "🤝" : "⏳";
   const title = outcome === "win" ? "youWin" : outcome === "lose" ? "youLose" : outcome === "draw" ? "drawResult" : "waitingOpponent";
 

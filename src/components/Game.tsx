@@ -47,6 +47,7 @@ export default function Game({ settings, duel, onQuit, onFinish }: Props) {
   const [lives, setLives] = useState(MAX_LIVES);
   const [flash, setFlash] = useState(0);
   const [opponent, setOpponent] = useState<Progress | null>(null);
+  const finishedRef = useRef(false);
   const progressRef = useRef({ correct: 0, score: 0, lives: MAX_LIVES });
   const [picked, setPicked] = useState<number | null>(null);
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
@@ -86,12 +87,24 @@ export default function Game({ settings, duel, onQuit, onFinish }: Props) {
       }
     }
     sync();
-    const timer = setInterval(sync, 2000);
+    const timer = setInterval(sync, 1000);
     return () => {
       stopped = true;
       clearInterval(timer);
     };
   }, [duel]);
+
+  // The moment the last life is gone, tell the server so the opponent is taken to the win screen.
+  useEffect(() => {
+    if (duel && lives <= 0) duelApi("sync", { matchId: duel.matchId, progress: { ...progressRef.current, finished: true } }).catch(() => {});
+  }, [duel, lives]);
+
+  useEffect(() => {
+    if (duel && opponent?.finished && !finishedRef.current) {
+      finishedRef.current = true;
+      onFinish(score, best, correctCount);
+    }
+  }, [duel, opponent, onFinish, score, best, correctCount]);
 
   timeoutRef.current = () => {
     if (revealed) return;
@@ -120,8 +133,11 @@ export default function Game({ settings, duel, onQuit, onFinish }: Props) {
   useEffect(() => {
     if (!revealed) return;
     const timer = setTimeout(() => {
-      if (lives <= 0 || index + 1 >= questions.length) onFinish(score, best, correctCount);
-      else {
+      if (finishedRef.current) return;
+      if (lives <= 0 || index + 1 >= questions.length) {
+        finishedRef.current = true;
+        onFinish(score, best, correctCount);
+      } else {
         setIndex(index + 1);
         setPicked(null);
         setSelectedCode(null);

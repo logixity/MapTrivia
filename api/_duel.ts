@@ -12,7 +12,7 @@ export interface DuelSettings { mode: string; continent: string; timeLimit: numb
 interface Player { id: string; name: string }
 interface Match { id: string; settings: DuelSettings; seed: number; players: [Player, Player]; startAt: number }
 interface Invite { id: string; from: Player; to: string; settings: DuelSettings; status: "pending" | "accepted" | "declined" | "cancelled"; matchId?: string; ts: number }
-interface Progress { correct: number; score: number; lives: number; finished: boolean; ts: number }
+interface Progress { correct: number; score: number; lives: number; finished: boolean; finishedAt?: number; ts: number }
 
 const MODES = ["flag-country", "country-capital", "capital-country", "country-flag", "draw-flag", "map-country", "country-map", "pin-country", "pin-capital", "pin-flag"];
 const CONTINENTS = ["All", "Europe", "Asia", "Africa", "North America", "South America", "Oceania"];
@@ -200,11 +200,11 @@ export async function handleDuel(store: Store, body: Body): Promise<{ status: nu
       };
       const previous = parse<Progress>(await store.get(`progress:${matchId}:${id}`));
       // A finished result is final; later heartbeats only refresh the timestamp.
-      const saved = previous?.finished ? { ...previous, ts: now } : progress;
+      const saved: Progress = previous?.finished ? { ...previous, ts: now } : progress.finished ? { ...progress, finishedAt: now } : progress;
       await store.set(`progress:${matchId}:${id}`, JSON.stringify(saved), MATCH_TTL_SECONDS);
       const other = match.players.find((p) => p.id !== id)!;
       const theirs = parse<Progress>(await store.get(`progress:${matchId}:${other.id}`));
-      return ok({ opponent: theirs ? { ...theirs, age: now - theirs.ts } : null, sinceStart: now - match.startAt });
+      return ok({ me: saved, opponent: theirs ? { ...theirs, age: now - theirs.ts } : null, sinceStart: now - match.startAt });
     }
 
     default:

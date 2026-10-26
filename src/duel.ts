@@ -4,7 +4,7 @@ import { Settings } from "./game";
 export interface DuelSettings { mode: Settings["mode"]; continent: Settings["continent"]; timeLimit: number }
 export interface DuelMatch { id: string; settings: DuelSettings; seed: number; opponent: string; startIn: number }
 export interface Invite { id: string; from: string; settings: DuelSettings }
-export interface Progress { correct: number; score: number; lives: number; finished: boolean; age?: number }
+export interface Progress { correct: number; score: number; lives: number; finished: boolean; finishedAt?: number; age?: number }
 
 // Per-tab id so two tabs can queue against each other.
 export const clientId: string = (() => {
