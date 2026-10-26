@@ -12,8 +12,9 @@ import DuelQueue from "./components/DuelQueue";
 import PlayerPicker from "./components/PlayerPicker";
 import DuelIntro from "./components/DuelIntro";
 import DuelResults from "./components/DuelResults";
+import { PartyMenu, CreateParty, JoinParty, PartyLobby } from "./components/Party";
 import InviteToasts from "./components/InviteToasts";
-import { DuelMatch, DuelSettings, Invite, duelApi, toSettings, usePresence } from "./duel";
+import { DuelMatch, DuelSettings, PartyInfo, Invite, duelApi, toSettings, usePresence } from "./duel";
 import { Settings } from "./game";
 import { Language, text } from "./i18n";
 
@@ -24,12 +25,16 @@ type Screen =
   | { name: "leaderboard" }
   | { name: "name" }
   | { name: "multiplayer" }
+  | { name: "partymenu" }
+  | { name: "partycreate" }
+  | { name: "partyjoin" }
+  | { name: "partylobby"; party: PartyInfo }
   | { name: "duelsetup"; send: boolean }
   | { name: "duelqueue"; settings: DuelSettings }
   | { name: "duelpick"; settings: DuelSettings }
   | { name: "duelintro"; match: DuelMatch }
   | { name: "duelgame"; match: DuelMatch; settings: Settings }
-  | { name: "duelresults"; match: DuelMatch; score: number; correct: number }
+  | { name: "duelresults"; match: DuelMatch; score: number; correct: number; lives: number; answered: number }
   | { name: "game"; settings: Settings }
   | { name: "results"; settings: Settings; score: number; best: number; correctCount: number };
 
@@ -75,7 +80,11 @@ export default function App() {
           {screen.name === "leaderboard" && <Leaderboard language={language} username={username} onBack={() => setScreen({ name: "home" })} />}
           {screen.name === "home" && <Home language={language} username={username} onLeaderboard={() => setScreen({ name: "leaderboard" })} onSingleplayer={() => setScreen({ name: "singleplayer" })} onMultiplayer={() => setScreen({ name: "multiplayer" })} onSettings={() => setScreen({ name: "settings" })} />}
           {screen.name === "singleplayer" && <Singleplayer showEligibility language={language} onBack={() => setScreen({ name: "home" })} onStart={(settings) => setScreen({ name: "game", settings })} />}
-          {screen.name === "multiplayer" && <Multiplayer language={language} available={presence.available} onDuel={() => setScreen({ name: "duelsetup", send: false })} onSendDuel={() => setScreen({ name: "duelsetup", send: true })} onBack={() => setScreen({ name: "home" })} />}
+          {screen.name === "multiplayer" && <Multiplayer language={language} available={presence.available} onParties={() => setScreen({ name: "partymenu" })} onDuel={() => setScreen({ name: "duelsetup", send: false })} onSendDuel={() => setScreen({ name: "duelsetup", send: true })} onBack={() => setScreen({ name: "home" })} />}
+          {screen.name === "partymenu" && <PartyMenu language={language} onCreate={() => setScreen({ name: "partycreate" })} onJoin={() => setScreen({ name: "partyjoin" })} onBack={() => setScreen({ name: "multiplayer" })} />}
+          {screen.name === "partycreate" && <CreateParty language={language} name={username} onCreated={(party) => setScreen({ name: "partylobby", party })} onBack={() => setScreen({ name: "partymenu" })} />}
+          {screen.name === "partyjoin" && <JoinParty language={language} name={username} onJoined={(party) => setScreen({ name: "partylobby", party })} onBack={() => setScreen({ name: "partymenu" })} />}
+          {screen.name === "partylobby" && <PartyLobby language={language} party={screen.party} you={username} onStart={startIntro} onLeave={() => setScreen({ name: "partymenu" })} />}
           {screen.name === "duelsetup" && (
             <Singleplayer
               language={language}
@@ -89,16 +98,16 @@ export default function App() {
           )}
           {screen.name === "duelqueue" && <DuelQueue language={language} name={username} settings={screen.settings} onMatch={startIntro} onBack={() => setScreen({ name: "multiplayer" })} />}
           {screen.name === "duelpick" && <PlayerPicker language={language} name={username} settings={screen.settings} online={presence.online} onMatch={startIntro} onBack={() => setScreen({ name: "multiplayer" })} />}
-          {screen.name === "duelintro" && <DuelIntro language={language} you={username} opponent={screen.match.opponent} startIn={screen.match.startIn} onStart={() => setScreen({ name: "duelgame", match: screen.match, settings: toSettings(screen.match.settings, screen.match.seed, language) })} />}
+          {screen.name === "duelintro" && <DuelIntro language={language} you={username} opponent={screen.match.kind === "party" ? screen.match.others.join(", ") : screen.match.opponent} startIn={screen.match.startIn} onStart={() => setScreen({ name: "duelgame", match: screen.match, settings: toSettings(screen.match.settings, screen.match.seed, language) })} />}
           {screen.name === "duelgame" && (
             <Game
               settings={screen.settings}
-              duel={{ matchId: screen.match.id, opponent: screen.match.opponent }}
+              duel={{ matchId: screen.match.id, opponents: screen.match.others }}
               onQuit={() => setScreen({ name: "home" })}
-              onFinish={(score, _best, correct) => setScreen({ name: "duelresults", match: screen.match, score, correct })}
+              onFinish={(score, _best, correct, lives, answered) => setScreen({ name: "duelresults", match: screen.match, score, correct, lives, answered })}
             />
           )}
-          {screen.name === "duelresults" && <DuelResults language={language} you={username} opponent={screen.match.opponent} matchId={screen.match.id} score={screen.score} correct={screen.correct} onMenu={() => setScreen({ name: "home" })} />}
+          {screen.name === "duelresults" && <DuelResults language={language} you={username} match={screen.match} score={screen.score} correct={screen.correct} lives={screen.lives} answered={screen.answered} onMenu={() => setScreen({ name: "home" })} />}
           {screen.name === "settings" && <SettingsScreen language={language} username={username} onChangeName={() => setScreen({ name: "name" })} onLanguage={changeLanguage} onBack={() => setScreen({ name: "home" })} />}
           {screen.name === "game" && (
             <Game
@@ -120,7 +129,7 @@ export default function App() {
           )}
         </motion.main>
       </AnimatePresence>
-      <InviteToasts language={language} invites={screen.name === "duelgame" || screen.name === "duelintro" ? [] : presence.invites} onAccept={(invite) => respond(invite, true)} onDecline={(invite) => respond(invite, false)} />
+      <InviteToasts language={language} invites={screen.name === "duelgame" || screen.name === "duelintro" || screen.name === "partylobby" ? [] : presence.invites} onAccept={(invite) => respond(invite, true)} onDecline={(invite) => respond(invite, false)} />
     </div>
   );
 }

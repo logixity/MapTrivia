@@ -6,13 +6,15 @@ interface Props {
   available: boolean;
   onDuel: () => void;
   onSendDuel: () => void;
+  onParties: () => void;
   onBack: () => void;
 }
 
-export default function Multiplayer({ language, available, onDuel, onSendDuel, onBack }: Props) {
+export default function Multiplayer({ language, available, onDuel, onSendDuel, onParties, onBack }: Props) {
   const cards = [
     { icon: "⚔️", title: "duel", desc: "duelDesc", action: onDuel },
     { icon: "📨", title: "sendDuel", desc: "sendDuelDesc", action: onSendDuel },
+    { icon: "🎉", title: "parties", desc: "partiesDesc", action: onParties },
   ];
   return (
     <div className="menu">

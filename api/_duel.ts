@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 // Duel matchmaking, invites and match sync. Storage-agnostic so it runs on Redis (Vercel) and in-memory (vite dev).
 
 export interface Store {
@@ -10,9 +12,11 @@ export interface Store {
 
 export interface DuelSettings { mode: string; continent: string; timeLimit: number }
 interface Player { id: string; name: string }
-interface Match { id: string; settings: DuelSettings; seed: number; players: [Player, Player]; startAt: number }
+interface Match { id: string; kind: "duel" | "party"; settings: DuelSettings; seed: number; players: Player[]; startAt: number }
+interface Member extends Player { ts: number }
+interface Party { id: string; host: Player; salt: string; hash: string; settings: DuelSettings; members: Member[]; status: "lobby" | "started"; matchId?: string; ts: number }
 interface Invite { id: string; from: Player; to: string; settings: DuelSettings; status: "pending" | "accepted" | "declined" | "cancelled"; matchId?: string; ts: number }
-interface Progress { correct: number; score: number; lives: number; finished: boolean; finishedAt?: number; ts: number }
+interface Progress { correct: number; score: number; lives: number; answered: number; died: boolean; finished: boolean; finishedAt?: number; ts: number }
 
 const MODES = ["flag-country", "country-capital", "capital-country", "country-flag", "draw-flag", "map-country", "country-map", "pin-country", "pin-capital", "pin-flag"];
 const CONTINENTS = ["All", "Europe", "Asia", "Africa", "North America", "South America", "Oceania"];
@@ -23,6 +27,7 @@ const QUEUE_TTL = 8_000;
 const INVITE_TTL = 60_000;
 const START_DELAY = 4_000;
 const MATCH_TTL_SECONDS = 3600;
+const MAX_PARTY = 8;
 
 type Body = Record<string, unknown>;
 
@@ -56,17 +61,32 @@ function randomId(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 }
 
-async function createMatch(store: Store, a: Player, b: Player, settings: DuelSettings): Promise<Match> {
-  const match: Match = { id: randomId(), settings, seed: Math.floor(Math.random() * 2 ** 31), players: [a, b], startAt: Date.now() + START_DELAY };
+async function createMatch(store: Store, players: Player[], settings: DuelSettings, kind: Match["kind"] = "duel"): Promise<Match> {
+  const match: Match = { id: randomId(), kind, settings, seed: Math.floor(Math.random() * 2 ** 31), players, startAt: Date.now() + START_DELAY };
   await store.set(`match:${match.id}`, JSON.stringify(match), MATCH_TTL_SECONDS);
   return match;
 }
 
 function matchView(match: Match, myId: string) {
-  const opponent = match.players.find((p) => p.id !== myId) ?? match.players[1];
-  return { id: match.id, settings: match.settings, seed: match.seed, opponent: opponent.name, startIn: Math.max(0, match.startAt - Date.now()) };
+  const others = match.players.filter((p) => p.id !== myId).map((p) => p.name);
+  return { id: match.id, kind: match.kind, settings: match.settings, seed: match.seed, opponent: others[0] ?? "", others, startIn: Math.max(0, match.startAt - Date.now()) };
 }
 
+function hashPassword(salt: string, password: string): string {
+  return password ? createHash("sha256").update(`${salt}:${password}`).digest("hex") : "";
+}
+
+function partyView(party: Party) {
+  return { id: party.id, host: party.host.name, hostId: party.host.id, members: party.members.map((m) => m.name), hasPassword: !!party.hash, settings: party.settings, status: party.status };
+}
+
+async function readParty(store: Store, id: string): Promise<Party | null> {
+  return parse<Party>((await store.hGetAll("parties"))[id]);
+}
+
+async function writeParty(store: Store, party: Party): Promise<void> {
+  await store.hSet("parties", party.id, JSON.stringify(party));
+}
 export async function handleDuel(store: Store, body: Body): Promise<{ status: number; json: unknown }> {
   const action = str(body.action);
   const id = str(body.id);
@@ -121,7 +141,7 @@ export async function handleDuel(store: Store, body: Body): Promise<{ status: nu
       }
       if (opponent) {
         await store.hDel(key, id);
-        const match = await createMatch(store, opponent, { id, name }, settings);
+        const match = await createMatch(store, [opponent, { id, name }], settings);
         await store.set(`matchof:${opponent.id}`, match.id, 120);
         await store.set(`matchof:${id}`, match.id, 120);
         return ok({ status: "matched", match: matchView(match, id) });
@@ -179,7 +199,7 @@ export async function handleDuel(store: Store, body: Body): Promise<{ status: nu
         await store.hSet("invites", inviteId, JSON.stringify(invite));
         return ok({ ok: true });
       }
-      const match = await createMatch(store, invite.from, { id, name }, invite.settings);
+      const match = await createMatch(store, [invite.from, { id, name }], invite.settings);
       invite.status = "accepted";
       invite.matchId = match.id;
       await store.hSet("invites", inviteId, JSON.stringify(invite));
@@ -191,10 +211,13 @@ export async function handleDuel(store: Store, body: Body): Promise<{ status: nu
       const match = parse<Match>(await store.get(`match:${matchId}`));
       if (!match || !match.players.some((p) => p.id === id)) return { status: 404, json: { error: "Unknown match" } };
       const mine = (body.progress ?? {}) as Body;
+      const lives = Math.max(0, Math.min(3, Math.floor(Number(mine.lives) || 0)));
       const progress: Progress = {
         correct: Math.max(0, Math.min(1000, Math.floor(Number(mine.correct) || 0))),
         score: Math.max(0, Math.min(1_000_000, Math.floor(Number(mine.score) || 0))),
-        lives: Math.max(0, Math.min(3, Math.floor(Number(mine.lives) || 0))),
+        lives,
+        answered: Math.max(0, Math.min(1000, Math.floor(Number(mine.answered) || 0))),
+        died: mine.died === true && lives === 0,
         finished: mine.finished === true,
         ts: now,
       };
@@ -202,11 +225,100 @@ export async function handleDuel(store: Store, body: Body): Promise<{ status: nu
       // A finished result is final; later heartbeats only refresh the timestamp.
       const saved: Progress = previous?.finished ? { ...previous, ts: now } : progress.finished ? { ...progress, finishedAt: now } : progress;
       await store.set(`progress:${matchId}:${id}`, JSON.stringify(saved), MATCH_TTL_SECONDS);
-      const other = match.players.find((p) => p.id !== id)!;
-      const theirs = parse<Progress>(await store.get(`progress:${matchId}:${other.id}`));
-      return ok({ me: saved, opponent: theirs ? { ...theirs, age: now - theirs.ts } : null, sinceStart: now - match.startAt });
+      const others = [];
+      for (const player of match.players) {
+        if (player.id === id) continue;
+        const theirs = parse<Progress>(await store.get(`progress:${matchId}:${player.id}`));
+        const fallback: Progress = { correct: 0, score: 0, lives: 3, answered: 0, died: false, finished: false, ts: match.startAt };
+        const value = theirs ?? fallback;
+        others.push({ name: player.name, ...value, age: now - Math.max(value.ts, match.startAt - START_DELAY) });
+      }
+      return ok({ me: saved, others, sinceStart: now - match.startAt });
     }
 
+    case "partyCreate": {
+      const name = str(body.name, 16);
+      const settings = parseSettings(body.settings);
+      const password = str(body.password, 32);
+      if (!validName(name) || !settings) return bad("Invalid party");
+      for (const [partyId, raw] of Object.entries(await store.hGetAll("parties"))) {
+        const existing = parse<Party>(raw);
+        if (!existing || existing.host.id === id || now - existing.ts > PRESENCE_TTL) await store.hDel("parties", partyId);
+      }
+      const salt = randomId();
+      const party: Party = { id: randomId(), host: { id, name }, salt, hash: hashPassword(salt, password), settings, members: [{ id, name, ts: now }], status: "lobby", ts: now };
+      await writeParty(store, party);
+      return ok({ party: partyView(party) });
+    }
+
+    case "partyList": {
+      const parties = [];
+      for (const [partyId, raw] of Object.entries(await store.hGetAll("parties"))) {
+        const party = parse<Party>(raw);
+        if (!party || now - party.ts > PRESENCE_TTL) await store.hDel("parties", partyId);
+        else if (party.status === "lobby") parties.push(partyView(party));
+      }
+      return ok({ parties });
+    }
+
+    case "partyJoin": {
+      const name = str(body.name, 16);
+      const party = await readParty(store, str(body.partyId));
+      if (!validName(name) || !party || party.status !== "lobby") return { status: 404, json: { error: "not_found" } };
+      if (party.hash && hashPassword(party.salt, str(body.password, 32)) !== party.hash) return { status: 403, json: { error: "wrong_password" } };
+      party.members = party.members.filter((m) => m.id === party.host.id || m.id === id || now - m.ts <= PRESENCE_TTL);
+      if (party.members.some((m) => m.name === name && m.id !== id)) return { status: 409, json: { error: "name_taken" } };
+      if (!party.members.some((m) => m.id === id)) {
+        if (party.members.length >= MAX_PARTY) return { status: 409, json: { error: "party_full" } };
+        party.members.push({ id, name, ts: now });
+      }
+      await writeParty(store, party);
+      return ok({ party: partyView(party) });
+    }
+
+    case "partyState": {
+      const party = await readParty(store, str(body.partyId));
+      if (!party || !party.members.some((m) => m.id === id)) return ok({ status: "gone" });
+      if (party.status === "lobby" && id !== party.host.id && now - party.ts > PRESENCE_TTL) {
+        await store.hDel("parties", party.id);
+        return ok({ status: "gone" });
+      }
+      if (party.status === "started" && party.matchId) {
+        const match = parse<Match>(await store.get(`match:${party.matchId}`));
+        if (match) return ok({ status: "started", match: matchView(match, id) });
+      }
+      const me = party.members.find((m) => m.id === id)!;
+      me.ts = now;
+      if (id === party.host.id) party.ts = now;
+      party.members = party.members.filter((m) => m.id === party.host.id || now - m.ts <= PRESENCE_TTL);
+      await writeParty(store, party);
+      return ok({ status: "lobby", party: partyView(party) });
+    }
+
+    case "partyLeave": {
+      const party = await readParty(store, str(body.partyId));
+      if (party) {
+        if (party.host.id === id) await store.hDel("parties", party.id);
+        else {
+          party.members = party.members.filter((m) => m.id !== id);
+          await writeParty(store, party);
+        }
+      }
+      return ok({ ok: true });
+    }
+
+    case "partyStart": {
+      const party = await readParty(store, str(body.partyId));
+      if (!party || party.host.id !== id || party.status !== "lobby") return { status: 404, json: { error: "not_found" } };
+      const members = party.members.filter((m) => m.id === id || now - m.ts <= PRESENCE_TTL);
+      if (members.length < 2) return bad("need_players");
+      const match = await createMatch(store, members.map((m) => ({ id: m.id, name: m.name })), party.settings, "party");
+      party.status = "started";
+      party.matchId = match.id;
+      party.members = members;
+      await writeParty(store, party);
+      return ok({ match: matchView(match, id) });
+    }
     default:
       return bad("Unknown action");
   }

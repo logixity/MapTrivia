@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { Settings } from "./game";
 
 export interface DuelSettings { mode: Settings["mode"]; continent: Settings["continent"]; timeLimit: number }
-export interface DuelMatch { id: string; settings: DuelSettings; seed: number; opponent: string; startIn: number }
+export interface DuelMatch { id: string; kind: "duel" | "party"; settings: DuelSettings; seed: number; opponent: string; others: string[]; startIn: number }
+export interface PartyInfo { id: string; host: string; hostId: string; members: string[]; hasPassword: boolean; settings: DuelSettings; status: "lobby" | "started" }
 export interface Invite { id: string; from: string; settings: DuelSettings }
-export interface Progress { correct: number; score: number; lives: number; finished: boolean; finishedAt?: number; age?: number }
+export interface Progress { name?: string; correct: number; score: number; lives: number; answered: number; died: boolean; finished: boolean; finishedAt?: number; age?: number }
 
 // Per-tab id so two tabs can queue against each other.
 export const clientId: string = (() => {

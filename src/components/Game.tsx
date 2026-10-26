@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { COUNTRIES } from "../data/countries";
 import { poolFor, Settings, buildQuiz } from "../game";
@@ -11,7 +11,7 @@ import WorldMap from "./WorldMap";
 import Lives from "./Lives";
 import AnimatedNumber from "./AnimatedNumber";
 import Burst from "./Burst";
-import { duelApi, Progress } from "../duel";
+import { FORFEIT_AFTER_MS, duelApi, Progress } from "../duel";
 
 const POINTS = 100;
 const MAX_LIVES = 3;
@@ -31,9 +31,9 @@ const PROMPT_KEYS: Record<string, string> = {
 
 interface Props {
   settings: Settings;
-  duel?: { matchId: string; opponent: string };
+  duel?: { matchId: string; opponents: string[] };
   onQuit: () => void;
-  onFinish: (score: number, bestStreak: number, correctCount: number) => void;
+  onFinish: (score: number, bestStreak: number, correctCount: number, lives: number, answered: number) => void;
 }
 
 export default function Game({ settings, duel, onQuit, onFinish }: Props) {
@@ -46,9 +46,10 @@ export default function Game({ settings, duel, onQuit, onFinish }: Props) {
   const [correctCount, setCorrectCount] = useState(0);
   const [lives, setLives] = useState(MAX_LIVES);
   const [flash, setFlash] = useState(0);
-  const [opponent, setOpponent] = useState<Progress | null>(null);
+  const [others, setOthers] = useState<Progress[]>([]);
+  const [revealDone, setRevealDone] = useState(false);
   const finishedRef = useRef(false);
-  const progressRef = useRef({ correct: 0, score: 0, lives: MAX_LIVES });
+  const progressRef = useRef({ correct: 0, score: 0, lives: MAX_LIVES, answered: 0, died: false });
   const [picked, setPicked] = useState<number | null>(null);
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
   const [flagAccuracy, setFlagAccuracy] = useState<number | null>(null);
@@ -73,38 +74,43 @@ export default function Game({ settings, duel, onQuit, onFinish }: Props) {
   const answerText = CAPITAL_OPTION_MODES.includes(settings.mode) ? capitalLabel : countryLabel;
   const outOfLives = revealed && lives <= 0;
   const revealDelay = outOfLives ? 2200 : award && award.bonus > 0 ? 2800 : award ? 1800 : 1500;
-  progressRef.current = { correct: correctCount, score, lives };
+  const answered = index + (revealed ? 1 : 0);
+  progressRef.current = { correct: correctCount, score, lives, answered, died: lives <= 0 };
+
+  const syncNow = useCallback(async (finished: boolean) => {
+    if (!duel) return;
+    try {
+      const data = await duelApi<{ others: Progress[] }>("sync", { matchId: duel.matchId, progress: { ...progressRef.current, finished } });
+      setOthers(data.others);
+    } catch {
+      // Missed syncs are retried on the next tick.
+    }
+  }, [duel]);
 
   useEffect(() => {
     if (!duel) return;
-    let stopped = false;
-    async function sync() {
-      try {
-        const data = await duelApi<{ opponent: Progress | null }>("sync", { matchId: duel!.matchId, progress: { ...progressRef.current, finished: false } });
-        if (!stopped) setOpponent(data.opponent);
-      } catch {
-        // Missed syncs are retried on the next tick.
-      }
-    }
-    sync();
-    const timer = setInterval(sync, 1000);
-    return () => {
-      stopped = true;
-      clearInterval(timer);
-    };
-  }, [duel]);
+    const timer = setInterval(() => syncNow(false), 1000);
+    return () => clearInterval(timer);
+  }, [duel, syncNow]);
 
-  // The moment the last life is gone, tell the server so the opponent is taken to the win screen.
+  // Report every answer (and the final life) right away so opponents never wait on the next heartbeat.
   useEffect(() => {
-    if (duel && lives <= 0) duelApi("sync", { matchId: duel.matchId, progress: { ...progressRef.current, finished: true } }).catch(() => {});
-  }, [duel, lives]);
+    syncNow(lives <= 0);
+  }, [syncNow, answered, lives]);
 
+  const gone = (p: Progress) => p.finished || (p.age ?? 0) > FORFEIT_AFTER_MS;
+  const aliveOthers = others.filter((p) => !gone(p));
+  const synced = !!duel && others.length === duel.opponents.length;
+  const ready = !duel || aliveOthers.every((p) => p.answered >= index + 1);
+  const waiting = !!duel && revealed && revealDone && lives > 0 && !ready;
+
+  // Last one standing: once nobody else is left in the match, this player is sent to the results.
   useEffect(() => {
-    if (duel && opponent?.finished && !finishedRef.current) {
+    if (synced && aliveOthers.length === 0 && !finishedRef.current) {
       finishedRef.current = true;
-      onFinish(score, best, correctCount);
+      onFinish(score, best, correctCount, lives, answered);
     }
-  }, [duel, opponent, onFinish, score, best, correctCount]);
+  }, [synced, aliveOthers.length, onFinish, score, best, correctCount, lives, answered]);
 
   timeoutRef.current = () => {
     if (revealed) return;
@@ -131,25 +137,31 @@ export default function Game({ settings, duel, onQuit, onFinish }: Props) {
   }, [index, revealed, limit]);
 
   useEffect(() => {
-    if (!revealed) return;
-    const timer = setTimeout(() => {
-      if (finishedRef.current) return;
-      if (lives <= 0 || index + 1 >= questions.length) {
-        finishedRef.current = true;
-        onFinish(score, best, correctCount);
-      } else {
-        setIndex(index + 1);
-        setPicked(null);
-        setSelectedCode(null);
-        setFlagAccuracy(null);
-        setAward(null);
-        setTimedOut(false);
-        setDrawTimeUp(false);
-      }
-    }, revealDelay);
+    if (!revealed) {
+      setRevealDone(false);
+      return;
+    }
+    const timer = setTimeout(() => setRevealDone(true), revealDelay);
     return () => clearTimeout(timer);
-  }, [revealed, index, questions.length, onFinish, score, best, correctCount, revealDelay, lives]);
+  }, [revealed, revealDelay]);
 
+  useEffect(() => {
+    if (!revealed || !revealDone || finishedRef.current) return;
+    if (lives <= 0 || index + 1 >= questions.length) {
+      finishedRef.current = true;
+      onFinish(score, best, correctCount, lives, answered);
+      return;
+    }
+    if (!ready) return;
+    setRevealDone(false);
+    setIndex(index + 1);
+    setPicked(null);
+    setSelectedCode(null);
+    setFlagAccuracy(null);
+    setAward(null);
+    setTimedOut(false);
+    setDrawTimeUp(false);
+  }, [revealed, revealDone, ready, index, questions.length, onFinish, score, best, correctCount, lives, answered]);
   function resolve(correct: boolean, accuracy?: number, answerIndex = 0) {
     if (revealed) return;
     setPicked(answerIndex);
@@ -211,11 +223,16 @@ export default function Game({ settings, duel, onQuit, onFinish }: Props) {
 
       {duel && (
         <div className="opponent-hud">
-          <span className="opp-name">⚔️ {duel.opponent}</span>
-          <Lives lives={opponent?.lives ?? MAX_LIVES} max={MAX_LIVES} small />
-          <span>✓ {opponent?.correct ?? 0}</span>
-          <span>{opponent?.score ?? 0}</span>
-          {opponent?.finished && <span className="opp-done">🏁</span>}
+          {duel.opponents.map((name) => {
+            const p = others.find((o) => o.name === name);
+            return (
+              <span key={name} className={`opp-chip ${p && gone(p) ? "out" : ""}`}>
+                <span className="opp-name">{p && gone(p) ? "💀" : "⚔️"} {name}</span>
+                <Lives lives={p?.lives ?? MAX_LIVES} max={MAX_LIVES} small />
+                <span>✓ {p?.correct ?? 0}</span>
+              </span>
+            );
+          })}
         </div>
       )}
 
@@ -258,6 +275,7 @@ export default function Game({ settings, duel, onQuit, onFinish }: Props) {
             })}
           </div>}
 
+          {waiting && <p className="waiting-note">⏳ {text(settings.language, "waitingForOthers")}</p>}
           <div className="feedback"><AnimatePresence>{revealed && <motion.p className={isCorrect ? "ok" : "bad"} initial={{ opacity: 0, scale: 0.6, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ type: "spring", stiffness: 300, damping: 15 }}>{feedback}</motion.p>}</AnimatePresence></div>
           {revealed && isCorrect && <Burst />}
           {revealed && award && <PointsPopup award={award} streakLabel={text(settings.language, "streak")} />}
