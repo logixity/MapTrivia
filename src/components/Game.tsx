@@ -8,8 +8,13 @@ import FlagCanvas from "./FlagCanvas";
 import HighlightMap from "./HighlightMap";
 import PointsPopup, { Award } from "./PointsPopup";
 import WorldMap from "./WorldMap";
+import Lives from "./Lives";
+import AnimatedNumber from "./AnimatedNumber";
+import Burst from "./Burst";
+import { duelApi, Progress } from "../duel";
 
 const POINTS = 100;
+const MAX_LIVES = 3;
 
 const COUNTRY_PROMPT_MODES = ["country-capital", "country-map", "country-flag", "draw-flag"];
 const COUNTRY_OPTION_MODES = ["flag-country", "capital-country", "country-flag", "pin-country", "pin-flag"];
@@ -26,11 +31,12 @@ const PROMPT_KEYS: Record<string, string> = {
 
 interface Props {
   settings: Settings;
+  duel?: { matchId: string; opponent: string };
   onQuit: () => void;
   onFinish: (score: number, bestStreak: number, correctCount: number) => void;
 }
 
-export default function Game({ settings, onQuit, onFinish }: Props) {
+export default function Game({ settings, duel, onQuit, onFinish }: Props) {
   const limit = settings.timeLimit ?? 0;
   const questions = useMemo(() => buildQuiz(settings), [settings]);
   const [index, setIndex] = useState(0);
@@ -38,6 +44,10 @@ export default function Game({ settings, onQuit, onFinish }: Props) {
   const [streak, setStreak] = useState(0);
   const [best, setBest] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
+  const [lives, setLives] = useState(MAX_LIVES);
+  const [flash, setFlash] = useState(0);
+  const [opponent, setOpponent] = useState<Progress | null>(null);
+  const progressRef = useRef({ correct: 0, score: 0, lives: MAX_LIVES });
   const [picked, setPicked] = useState<number | null>(null);
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
   const [flagAccuracy, setFlagAccuracy] = useState<number | null>(null);
@@ -60,7 +70,28 @@ export default function Game({ settings, onQuit, onFinish }: Props) {
   const capitalLabel = localizedCapital(target.capital, settings.language);
   const promptText = COUNTRY_PROMPT_MODES.includes(settings.mode) ? countryLabel : capitalLabel;
   const answerText = CAPITAL_OPTION_MODES.includes(settings.mode) ? capitalLabel : countryLabel;
-  const revealDelay = award && award.bonus > 0 ? 2800 : award ? 1800 : 1500;
+  const outOfLives = revealed && lives <= 0;
+  const revealDelay = outOfLives ? 2200 : award && award.bonus > 0 ? 2800 : award ? 1800 : 1500;
+  progressRef.current = { correct: correctCount, score, lives };
+
+  useEffect(() => {
+    if (!duel) return;
+    let stopped = false;
+    async function sync() {
+      try {
+        const data = await duelApi<{ opponent: Progress | null }>("sync", { matchId: duel!.matchId, progress: { ...progressRef.current, finished: false } });
+        if (!stopped) setOpponent(data.opponent);
+      } catch {
+        // Missed syncs are retried on the next tick.
+      }
+    }
+    sync();
+    const timer = setInterval(sync, 2000);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+    };
+  }, [duel]);
 
   timeoutRef.current = () => {
     if (revealed) return;
@@ -89,7 +120,7 @@ export default function Game({ settings, onQuit, onFinish }: Props) {
   useEffect(() => {
     if (!revealed) return;
     const timer = setTimeout(() => {
-      if (index + 1 >= questions.length) onFinish(score, best, correctCount);
+      if (lives <= 0 || index + 1 >= questions.length) onFinish(score, best, correctCount);
       else {
         setIndex(index + 1);
         setPicked(null);
@@ -101,7 +132,7 @@ export default function Game({ settings, onQuit, onFinish }: Props) {
       }
     }, revealDelay);
     return () => clearTimeout(timer);
-  }, [revealed, index, questions.length, onFinish, score, best, correctCount, revealDelay]);
+  }, [revealed, index, questions.length, onFinish, score, best, correctCount, revealDelay, lives]);
 
   function resolve(correct: boolean, accuracy?: number, answerIndex = 0) {
     if (revealed) return;
@@ -120,6 +151,8 @@ export default function Game({ settings, onQuit, onFinish }: Props) {
       setAward({ base, bonus, streak: nextStreak });
     } else {
       setStreak(0);
+      setLives(lives - 1);
+      setFlash((n) => n + 1);
       if (accuracy !== undefined && accuracy > 0) {
         setScore(score + accuracy);
         setAward({ base: accuracy, bonus: 0, streak: 0 });
@@ -146,19 +179,33 @@ export default function Game({ settings, onQuit, onFinish }: Props) {
     ? `${text(settings.language, "accuracy")}: ${flagAccuracy}%`
     : isCorrect
       ? text(settings.language, "correct")
-      : `${timedOut ? `${text(settings.language, "timeUp")} ` : ""}${text(settings.language, "answerWas")} ${answerText}`;
+      : `${timedOut ? `${text(settings.language, "timeUp")} ` : ""}${text(settings.language, "answerWas")} ${answerText}${outOfLives ? ` · ${text(settings.language, "lostAllLives")}` : ""}`;
 
   return (
     <div className="game">
       <header className="hud">
         <button className="ghost" onClick={onQuit}>✕ {text(settings.language, "quit")}</button>
-        <div className="progress"><motion.div className="progress-bar" animate={{ width: `${((index + (revealed ? 1 : 0)) / questions.length) * 100}%` }} /></div>
+        <Lives lives={lives} max={MAX_LIVES} />
         <div className="stats">
-          <span>{text(settings.language, "score")} <b>{score}</b></span>
+          <span>{text(settings.language, "score")} <b><AnimatedNumber value={score} /></b></span>
           <span className="right-count">✓ {correctCount}</span>
-          <span className={streak >= 3 ? "hot" : ""}>🔥 {streak}</span>
+          <motion.span key={streak} className={streak >= 3 ? "hot" : ""} initial={{ scale: streak ? 1.5 : 1 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 300, damping: 10 }}>🔥 {streak}</motion.span>
         </div>
       </header>
+
+      {duel && (
+        <div className="opponent-hud">
+          <span className="opp-name">⚔️ {duel.opponent}</span>
+          <Lives lives={opponent?.lives ?? MAX_LIVES} max={MAX_LIVES} small />
+          <span>✓ {opponent?.correct ?? 0}</span>
+          <span>{opponent?.score ?? 0}</span>
+          {opponent?.finished && <span className="opp-done">🏁</span>}
+        </div>
+      )}
+
+      <AnimatePresence>
+        {flash > 0 && <motion.div key={flash} className="flash" initial={{ opacity: 0.45 }} animate={{ opacity: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.6 }} />}
+      </AnimatePresence>
 
       {limit > 0 && (
         <div className={`timer ${timeLeft <= 5 ? "low" : ""}`} aria-label="Time left">
@@ -168,8 +215,8 @@ export default function Game({ settings, onQuit, onFinish }: Props) {
       )}
 
       <AnimatePresence mode="wait">
-        <motion.section key={index} className="question" initial={{ opacity: 0, x: 60 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -60 }} transition={{ duration: 0.25 }}>
-          <p className="counter">{text(settings.language, "question")} {index + 1} / {questions.length}</p>
+        <motion.section key={index} className="question" initial={{ opacity: 0, x: 80, scale: 0.96 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, x: -80, scale: 0.96 }} transition={{ type: "spring", stiffness: 260, damping: 26 }}>
+          <p className="counter">{text(settings.language, "question")} {index + 1}</p>
           {q.promptFlag
             ? <motion.span className={`fi fi-${q.promptFlag} big-flag`} initial={{ rotateY: 90 }} animate={{ rotateY: 0 }} transition={{ type: "spring", stiffness: 120 }} />
             : q.promptMap
@@ -188,14 +235,15 @@ export default function Game({ settings, onQuit, onFinish }: Props) {
                 ? localizedCountry(option.countryCode, option.label, settings.language)
                 : CAPITAL_OPTION_MODES.includes(settings.mode) ? localizedCapital(option.label, settings.language) : option.label;
               return (
-                <motion.button key={optionIndex} className={`answer ${state}`} onClick={() => choose(optionIndex)} disabled={revealed} initial={{ opacity: 0, y: 20 }} animate={state === "wrong" ? { opacity: 1, y: 0, x: [0, -8, 8, -8, 8, 0] } : { opacity: 1, y: 0 }} transition={{ delay: revealed ? 0 : optionIndex * 0.06 }} whileHover={revealed ? undefined : { scale: 1.03 }} whileTap={revealed ? undefined : { scale: 0.97 }}>
+                <motion.button key={optionIndex} className={`answer ${state}`} onClick={() => choose(optionIndex)} disabled={revealed} initial={{ opacity: 0, y: 20 }} animate={state === "wrong" ? { opacity: 1, y: 0, x: [0, -10, 10, -8, 8, 0] } : state === "correct" ? { opacity: 1, y: 0, scale: [1, 1.1, 1] } : { opacity: 1, y: 0 }} transition={revealed ? { duration: 0.5 } : { type: "spring", stiffness: 300, damping: 20, delay: optionIndex * 0.07 }} whileHover={revealed ? undefined : { scale: 1.03 }} whileTap={revealed ? undefined : { scale: 0.97 }}>
                   {option.flag ? <span className={`fi fi-${option.flag} option-flag`} aria-label={label} /> : label}
                 </motion.button>
               );
             })}
           </div>}
 
-          <div className="feedback"><AnimatePresence>{revealed && <motion.p className={isCorrect ? "ok" : "bad"} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>{feedback}</motion.p>}</AnimatePresence></div>
+          <div className="feedback"><AnimatePresence>{revealed && <motion.p className={isCorrect ? "ok" : "bad"} initial={{ opacity: 0, scale: 0.6, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ type: "spring", stiffness: 300, damping: 15 }}>{feedback}</motion.p>}</AnimatePresence></div>
+          {revealed && isCorrect && <Burst />}
           {revealed && award && <PointsPopup award={award} streakLabel={text(settings.language, "streak")} />}
         </motion.section>
       </AnimatePresence>

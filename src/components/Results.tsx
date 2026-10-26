@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { animate, motion } from "framer-motion";
 import { MODES, MODE_KEYS, Settings } from "../game";
+import Burst from "./Burst";
 import { text } from "../i18n";
 import { submitScore } from "../leaderboard";
 
@@ -40,10 +41,11 @@ export default function Results({ settings, username, score, best, correctCount,
       <motion.div className="trophy" initial={{ scale: 0, rotate: -30 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: "spring", stiffness: 180, damping: 10 }}>
         {record.isNew ? "🏆" : "🎉"}
       </motion.div>
+      {record.isNew && <Burst count={24} />}
       <h2>{record.isNew ? text(settings.language, "newRecord") : text(settings.language, "gameOver")}</h2>
       <p className="subtitle">{text(settings.language, modeKeys[mode.id])}</p>
       <div className="final-score">{shown}</div>
-      <p className="result-stats">✓ {correctCount} / {settings.rounds}</p>
+      <p className="result-stats">✓ {correctCount}</p>
       <p className="subtitle">{text(settings.language, "bestStreak")}: {best} · {text(settings.language, "personalBest")}: {Math.max(record.prev, score)}</p>
       <div className="results-actions">
         <motion.button className="play" whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.95 }} onClick={onAgain}>

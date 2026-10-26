@@ -1,4 +1,5 @@
 import { Continent } from "./data/countries";
+import { duelStrings } from "./i18nDuel";
 
 export type Language = "en" | "de" | "fr" | "it" | "es" | "hu";
 
@@ -39,7 +40,7 @@ const extra: Record<Language, Record<string, string>> = {
 };
 
 export function text(language: Language, key: string): string {
-  return strings[language][key] ?? supplemental[language][key] ?? extra[language][key] ?? strings.en[key] ?? supplemental.en[key] ?? extra.en[key] ?? key;
+  return strings[language][key] ?? supplemental[language][key] ?? extra[language][key] ?? duelStrings[language][key] ?? strings.en[key] ?? supplemental.en[key] ?? extra.en[key] ?? duelStrings.en[key] ?? key;
 }
 
 export function localizedCountry(code: string, fallback: string, language: Language): string {

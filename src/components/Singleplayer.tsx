@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { CONTINENTS } from "../data/countries";
-import { MODES, ModeId, Settings, poolFor } from "../game";
+import { ModeId, Settings } from "../game";
 import { Language, continentName, text } from "../i18n";
 
-const ROUND_OPTIONS = [5, 10, 20];
 const TIME_OPTIONS = [10, 15, 30, 60, 0];
 
 type Guess = "country" | "capital" | "flag" | "map";
@@ -54,17 +53,16 @@ interface Props {
   language: Language;
   onStart: (settings: Settings) => void;
   onBack: () => void;
+  finishLabel?: string;
 }
 
-export default function Singleplayer({ language, onStart, onBack }: Props) {
+export default function Singleplayer({ language, onStart, onBack, finishLabel }: Props) {
   const [step, setStep] = useState(0);
   const [guess, setGuess] = useState<Guess | null>(null);
   const [mode, setMode] = useState<ModeId | null>(null);
   const [continent, setContinent] = useState<Settings["continent"]>("All");
-  const [rounds, setRounds] = useState(10);
   const [timeLimit, setTimeLimit] = useState(15);
 
-  const available = poolFor(continent).length;
   const titles = ["stepGuess", "stepFrom", "stepOptions"];
   const canNext = step === 0 ? guess !== null : step === 1 ? mode !== null : true;
 
@@ -82,7 +80,7 @@ export default function Singleplayer({ language, onStart, onBack }: Props) {
 
   function next() {
     if (step < 2) setStep(step + 1);
-    else if (mode) onStart({ mode, continent, rounds: Math.min(rounds, available), timeLimit, language });
+    else if (mode) onStart({ mode, continent, timeLimit, language });
   }
 
   return (
@@ -123,12 +121,6 @@ export default function Singleplayer({ language, onStart, onBack }: Props) {
               <button key={c} className={`chip ${continent === c ? "active" : ""}`} onClick={() => setContinent(c)}>{continentName(c, language)}</button>
             ))}
           </div>
-          <p className="option-label">{text(language, "rounds")}</p>
-          <div className="chip-row">
-            {ROUND_OPTIONS.map((r) => (
-              <button key={r} className={`chip ${rounds === r ? "active" : ""}`} onClick={() => setRounds(r)}>{r}</button>
-            ))}
-          </div>
           <p className="option-label">{text(language, "timeLimit")}</p>
           <div className="chip-row">
             {TIME_OPTIONS.map((t) => (
@@ -143,7 +135,7 @@ export default function Singleplayer({ language, onStart, onBack }: Props) {
         {step < 2 ? (
           <button className="play" disabled={!canNext} onClick={next}>{text(language, "next")} →</button>
         ) : (
-          <button className="play" onClick={next}>{text(language, "play")}</button>
+          <button className="play" onClick={next}>{finishLabel ?? text(language, "play")}</button>
         )}
       </div>
     </div>

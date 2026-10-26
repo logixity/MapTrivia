@@ -5,7 +5,7 @@ interface Req { method?: string; query: Record<string, string | string[] | undef
 interface Res { status(code: number): Res; json(body: unknown): void }
 
 const MODES = ["flag-country", "country-capital", "capital-country", "country-flag", "draw-flag", "map-country", "country-map", "pin-country", "pin-capital", "pin-flag"];
-const MAX_SCORE = 6000;
+const MAX_SCORE = 1_000_000;
 
 type Client = ReturnType<typeof createClient>;
 

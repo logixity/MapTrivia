@@ -44,15 +44,29 @@ export interface Question {
 export interface Settings {
   mode: ModeId;
   continent: Continent | "All";
-  rounds: number;
+  seed?: number; // shared seed so duel opponents get the same questions
   timeLimit: number; // seconds per question, 0 = unlimited
   language: import("./i18n").Language;
 }
 
-function shuffle<T>(arr: T[]): T[] {
+export type Rng = () => number;
+
+export function makeRng(seed?: number): Rng {
+  if (seed === undefined) return Math.random;
+  let s = seed >>> 0;
+  return () => {
+    s = (s + 0x6d2b79f5) >>> 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffle<T>(arr: T[], rng: Rng): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rng() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
@@ -62,7 +76,7 @@ export function poolFor(continent: Settings["continent"]): Country[] {
   return continent === "All" ? COUNTRIES : COUNTRIES.filter((c) => c.continent === continent);
 }
 
-function buildQuestion(mode: ModeId, target: Country): Question {
+function buildQuestion(mode: ModeId, target: Country, rng: Rng): Question {
   if (mode === "draw-flag") {
     return { type: "draw-flag", prompt: target.name, promptSub: "Draw this country's flag", options: [], answerLabel: target.name, targetCode: target.code };
   }
@@ -75,8 +89,8 @@ function buildQuestion(mode: ModeId, target: Country): Question {
   // Distractors come from the same continent when possible, to keep them plausible.
   const sameContinent = COUNTRIES.filter((c) => c.continent === target.continent && c.code !== target.code);
   const source = sameContinent.length >= 3 ? sameContinent : COUNTRIES.filter((c) => c.code !== target.code);
-  const distractors = shuffle(source).slice(0, 3);
-  const all = shuffle([target, ...distractors]);
+  const distractors = shuffle(source, rng).slice(0, 3);
+  const all = shuffle([target, ...distractors], rng);
 
   const toOption = (c: Country): Option => {
     const correct = c.code === target.code;
@@ -117,9 +131,8 @@ export function buildQuiz(settings: Settings): Question[] {
   const all = poolFor(settings.continent);
   const needsMap = ["map-country", "country-map", "pin-country", "pin-capital", "pin-flag"].includes(settings.mode);
   const pool = needsMap ? all.filter((c) => MAPPED_CODES.has(c.code)) : all;
-  return shuffle(pool)
-    .slice(0, settings.rounds)
-    .map((t) => buildQuestion(settings.mode, t));
+  const rng = makeRng(settings.seed);
+  return shuffle(pool, rng).map((t) => buildQuestion(settings.mode, t, rng));
 }
 
 export const MODE_KEYS: Record<ModeId, string> = { "flag-country": "modeFlag", "country-capital": "modeCapital", "capital-country": "modeCapitalCountry", "country-flag": "modeCountryFlag", "draw-flag": "modeDraw", "map-country": "modeMap", "country-map": "modeCountryMap", "pin-country": "modePinCountry", "pin-capital": "modePinCapital", "pin-flag": "modePinFlag" };
