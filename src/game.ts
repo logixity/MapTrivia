@@ -1,4 +1,5 @@
 import { COUNTRIES, Continent, Country } from "./data/countries";
+import { Difficulty, orderByDifficulty } from "./data/difficulty";
 import { MAPPED_CODES } from "./mapData";
 
 export type ModeId = "flag-country" | "country-capital" | "capital-country" | "country-flag" | "draw-flag" | "map-country" | "country-map" | "pin-country" | "pin-capital" | "pin-flag";
@@ -44,6 +45,7 @@ export interface Question {
 export interface Settings {
   mode: ModeId;
   continent: Continent | "All";
+  difficulty?: Difficulty; // defaults to "all"
   seed?: number; // shared seed so duel opponents get the same questions
   timeLimit: number; // seconds per question, 0 = unlimited
   language: import("./i18n").Language;
@@ -132,13 +134,22 @@ export function buildQuiz(settings: Settings): Question[] {
   const needsMap = ["map-country", "country-map", "pin-country", "pin-capital", "pin-flag"].includes(settings.mode);
   const pool = needsMap ? all.filter((c) => MAPPED_CODES.has(c.code)) : all;
   const rng = makeRng(settings.seed);
-  return shuffle(pool, rng).map((t) => buildQuestion(settings.mode, t, rng));
+  return orderByDifficulty(pool, settings.difficulty ?? "all", <T,>(items: T[]) => shuffle(items, rng)).map((t) => buildQuestion(settings.mode, t, rng));
 }
 
 export const MODE_KEYS: Record<ModeId, string> = { "flag-country": "modeFlag", "country-capital": "modeCapital", "capital-country": "modeCapitalCountry", "country-flag": "modeCountryFlag", "draw-flag": "modeDraw", "map-country": "modeMap", "country-map": "modeCountryMap", "pin-country": "modePinCountry", "pin-capital": "modePinCapital", "pin-flag": "modePinFlag" };
 
 export const LEADERBOARD_TIME_LIMIT = 15;
 
-export function leaderboardEligible(settings: Pick<Settings, "continent" | "timeLimit">): boolean {
-  return settings.continent === "All" && settings.timeLimit === LEADERBOARD_TIME_LIMIT;
+// Drawing a flag takes longer, so it gets a longer base time.
+export function baseTimeLimit(mode: ModeId): number {
+  return mode === "draw-flag" ? 30 : LEADERBOARD_TIME_LIMIT;
+}
+
+// Shorter timers are harder, so they count too; unlimited time does not.
+export function leaderboardEligible(settings: Pick<Settings, "continent" | "timeLimit" | "mode" | "difficulty">): boolean {
+  return settings.continent === "All"
+    && (settings.difficulty ?? "all") === "all"
+    && settings.timeLimit > 0
+    && settings.timeLimit <= baseTimeLimit(settings.mode);
 }

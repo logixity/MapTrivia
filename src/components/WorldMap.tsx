@@ -1,4 +1,4 @@
-import { MouseEvent, PointerEvent, WheelEvent, useMemo, useRef, useState } from "react";
+import { MouseEvent, PointerEvent, WheelEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Country } from "../data/countries";
 import { Language, localizedCountry } from "../i18n";
 import { MAP_H, MAP_SHAPES, MAP_W } from "../mapData";
@@ -32,6 +32,15 @@ export default function WorldMap({ targetCode, countries, selectedCode, revealed
   const names = useMemo(() => new Map(countries.map((country) => [country.code, localizedCountry(country.code, country.name, language)])), [countries, language]);
   const target = MAP_SHAPES.find((shape) => shape.code === targetCode);
   const viewH = (view.w * MAP_H) / MAP_W;
+
+  // After answering, fly to the right country so a wrong guess can see where it was.
+  useEffect(() => {
+    if (!revealed || !target) return;
+    const [x0, y0, x1, y1] = target.bounds;
+    const w = Math.min(MAP_W, Math.max((x1 - x0) * 2.2, (y1 - y0) * 2.2 * (MAP_W / MAP_H), 120));
+    const h = (w * MAP_H) / MAP_W;
+    setView(clamp({ w, x: target.center[0] - w / 2, y: target.center[1] - h / 2 }));
+  }, [revealed, target]);
 
   function zoomAt(factor: number, cx = view.x + view.w / 2, cy = view.y + viewH / 2) {
     const w = Math.min(MAP_W, Math.max(MAP_W / MAX_ZOOM, view.w / factor));

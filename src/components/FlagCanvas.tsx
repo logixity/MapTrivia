@@ -26,6 +26,7 @@ interface Props {
   code: string;
   onSubmit: (accuracy: number) => void;
   timeUp?: boolean;
+  revealLabel?: string;
   clearLabel: string;
   submitLabel: string;
 }
@@ -118,8 +119,11 @@ function drawShape(context: CanvasRenderingContext2D, tool: Tool, a: Point, b: P
   else context.stroke();
 }
 
-export default function FlagCanvas({ code, onSubmit, timeUp, clearLabel, submitLabel }: Props) {
+export default function FlagCanvas({ code, onSubmit, timeUp, clearLabel, submitLabel, revealLabel }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const submitted = useRef(false);
+  const [showReal, setShowReal] = useState(false);
+  const flagAsset = Object.entries(flagImages).find(([path]) => path.endsWith(`/${code}.svg`))?.[1];
   const drawing = useRef(false);
   const startPoint = useRef<Point>({ x: 0, y: 0 });
   const snapshot = useRef<ImageData | null>(null);
@@ -165,6 +169,7 @@ export default function FlagCanvas({ code, onSubmit, timeUp, clearLabel, submitL
   }
 
   function start(event: PointerEvent<HTMLCanvasElement>) {
+    if (submitted.current) return;
     const canvas = event.currentTarget;
     const context = canvas.getContext("2d", { willReadFrequently: true });
     if (!context) return;
@@ -232,8 +237,12 @@ export default function FlagCanvas({ code, onSubmit, timeUp, clearLabel, submitL
   }
 
   function submit() {
+    if (submitted.current) return;
+    submitted.current = true;
+    drawing.current = false;
+    setShowReal(true);
     const canvas = canvasRef.current;
-    const asset = Object.entries(flagImages).find(([path]) => path.endsWith(`/${code}.svg`))?.[1];
+    const asset = flagAsset;
     if (!canvas || !asset) {
       onSubmit(0);
       return;
@@ -279,6 +288,7 @@ export default function FlagCanvas({ code, onSubmit, timeUp, clearLabel, submitL
 
   return (
     <div className="draw-wrap">
+      <div className="canvas-wrap">
       <canvas
         ref={canvasRef}
         className="flag-canvas"
@@ -290,6 +300,13 @@ export default function FlagCanvas({ code, onSubmit, timeUp, clearLabel, submitL
         onPointerUp={stop}
         onPointerCancel={stop}
       />
+      {showReal && flagAsset && (
+        <>
+          <img className="flag-reveal" src={flagAsset} alt="" />
+          {revealLabel && <span className="flag-reveal-label">{revealLabel}</span>}
+        </>
+      )}
+      </div>
       <div className="draw-toolbar" aria-label="Tools">
         {TOOLS.map((item) => (
           <button key={item.id} type="button" className={`tool-btn ${tool === item.id ? "chosen" : ""}`} title={item.label} aria-label={item.label} onClick={() => setTool(item.id)}>{item.icon}</button>
@@ -307,8 +324,8 @@ export default function FlagCanvas({ code, onSubmit, timeUp, clearLabel, submitL
         )}
       </div>
       <div className="draw-actions">
-        <button className="ghost" type="button" onClick={clear}>{clearLabel}</button>
-        <button className="play draw-submit" type="button" disabled={!hasDrawn} onClick={submit}>{submitLabel}</button>
+        <button className="ghost" type="button" disabled={showReal} onClick={clear}>{clearLabel}</button>
+        <button className="play draw-submit" type="button" disabled={!hasDrawn || showReal} onClick={submit}>{submitLabel}</button>
       </div>
     </div>
   );

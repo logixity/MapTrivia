@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { CONTINENTS } from "../data/countries";
-import { ModeId, Settings, leaderboardEligible } from "../game";
+import { DIFFICULTIES, Difficulty } from "../data/difficulty";
+import { ModeId, Settings, baseTimeLimit, leaderboardEligible } from "../game";
 import { Language, continentName, text } from "../i18n";
 
 const TIME_OPTIONS = [10, 15, 30, 60, 0];
+const DIFFICULTY_KEYS: Record<Difficulty, string> = { all: "dAll", easy: "dEasy", medium: "dMedium", hard: "dHard", insane: "dInsane", impossible: "dImpossible" };
 
 type Guess = "country" | "capital" | "flag" | "map";
 
@@ -63,15 +65,22 @@ export default function Singleplayer({ language, onStart, onBack, finishLabel, s
   const [mode, setMode] = useState<ModeId | null>(null);
   const [continent, setContinent] = useState<Settings["continent"]>("All");
   const [timeLimit, setTimeLimit] = useState(15);
+  const [difficulty, setDifficulty] = useState<Difficulty>("all");
 
   const titles = ["stepGuess", "stepFrom", "stepOptions"];
   const canNext = step === 0 ? guess !== null : step === 1 ? mode !== null : true;
+
+  function pickMode(next: ModeId) {
+    setMode(next);
+    setTimeLimit(baseTimeLimit(next));
+  }
 
   function chooseGuess(next: Guess) {
     setGuess(next);
     const options = SOURCES[next];
     // Pre-select when there is only one way to play it.
-    setMode(options.length === 1 ? options[0].mode : null);
+    if (options.length === 1) pickMode(options[0].mode);
+    else setMode(null);
   }
 
   function back() {
@@ -81,7 +90,7 @@ export default function Singleplayer({ language, onStart, onBack, finishLabel, s
 
   function next() {
     if (step < 2) setStep(step + 1);
-    else if (mode) onStart({ mode, continent, timeLimit, language });
+    else if (mode) onStart({ mode, continent, timeLimit, language, ...(showEligibility ? { difficulty } : {}) });
   }
 
   return (
@@ -105,7 +114,7 @@ export default function Singleplayer({ language, onStart, onBack, finishLabel, s
       {step === 1 && guess && (
         <div className="mode-grid">
           {SOURCES[guess].map((item, i) => (
-            <motion.button key={item.mode} className={`mode-card ${mode === item.mode ? "selected" : ""}`} onClick={() => setMode(item.mode)} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }} whileHover={{ scale: 1.04, y: -4 }} whileTap={{ scale: 0.97 }}>
+            <motion.button key={item.mode} className={`mode-card ${mode === item.mode ? "selected" : ""}`} onClick={() => pickMode(item.mode)} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }} whileHover={{ scale: 1.04, y: -4 }} whileTap={{ scale: 0.97 }}>
               <span className="mode-icon">{item.icon}</span>
               <strong>{text(language, item.label)}</strong>
               <small>{text(language, DESCRIPTIONS[item.mode])}</small>
@@ -128,10 +137,20 @@ export default function Singleplayer({ language, onStart, onBack, finishLabel, s
               <button key={t} className={`chip ${timeLimit === t ? "active" : ""}`} onClick={() => setTimeLimit(t)}>{t === 0 ? "∞" : `${t}s`}</button>
             ))}
           </div>
+          {showEligibility && (
+            <>
+              <p className="option-label">{text(language, "difficulty")}</p>
+              <div className="chip-row">
+                {DIFFICULTIES.map((d) => (
+                  <button key={d} className={`chip ${difficulty === d ? "active" : ""}`} onClick={() => setDifficulty(d)}>{text(language, DIFFICULTY_KEYS[d])}</button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )}
 
-      {step === 2 && showEligibility && !leaderboardEligible({ continent, timeLimit }) && <p className="notice">{text(language, "notEligible")}</p>}
+      {step === 2 && showEligibility && mode && !leaderboardEligible({ mode, continent, timeLimit, difficulty }) && <p className="notice">{text(language, "notEligible")}</p>}
 
       <div className="wizard-nav">
         <button className="ghost" onClick={back}>← {text(language, "back")}</button>

@@ -7,6 +7,8 @@ import { localizedCapital } from "../data/capitals";
 import FlagCanvas from "./FlagCanvas";
 import HighlightMap from "./HighlightMap";
 import PointsPopup, { Award } from "./PointsPopup";
+import FireEdge from "./FireEdge";
+import { streakLevel } from "./StreakFlame";
 import WorldMap from "./WorldMap";
 import Lives from "./Lives";
 import AnimatedNumber from "./AnimatedNumber";
@@ -73,7 +75,10 @@ export default function Game({ settings, duel, onQuit, onFinish }: Props) {
   const promptText = COUNTRY_PROMPT_MODES.includes(settings.mode) ? countryLabel : capitalLabel;
   const answerText = CAPITAL_OPTION_MODES.includes(settings.mode) ? capitalLabel : countryLabel;
   const outOfLives = revealed && lives <= 0;
-  const revealDelay = outOfLives ? 2200 : award && award.bonus > 0 ? 2800 : award ? 1800 : 1500;
+  const level = streakLevel(streak);
+  // Mistakes (and drawings, which show the real flag) stay up longer so there is time to learn from them.
+  const learning = revealed && (!isCorrect || q.type === "draw-flag");
+  const revealDelay = q.type === "draw-flag" ? 5000 : outOfLives ? 4500 : learning ? 3800 : award && award.bonus > 0 ? 3400 : award ? 1800 : 1500;
   const answered = index + (revealed ? 1 : 0);
   progressRef.current = { correct: correctCount, score, lives, answered, died: lives <= 0 };
 
@@ -210,14 +215,15 @@ export default function Game({ settings, duel, onQuit, onFinish }: Props) {
       : `${timedOut ? `${text(settings.language, "timeUp")} ` : ""}${text(settings.language, "answerWas")} ${answerText}${outOfLives ? ` · ${text(settings.language, "lostAllLives")}` : ""}`;
 
   return (
-    <div className="game">
+    <motion.div className={`game ${level ? `fire-${level}` : ""}`} animate={revealed && isCorrect && level >= 2 ? { x: [0, -7, 7, -5, 5, 0] } : { x: 0 }} transition={{ duration: 0.4 }}>
+      <FireEdge level={level} />
       <header className="hud">
         <button className="ghost" onClick={onQuit}>✕ {text(settings.language, "quit")}</button>
         <Lives lives={lives} max={MAX_LIVES} />
         <div className="stats">
           <span>{text(settings.language, "score")} <b><AnimatedNumber value={score} /></b></span>
           <span className="right-count">✓ {correctCount}</span>
-          <motion.span key={streak} className={streak >= 3 ? "hot" : ""} initial={{ scale: streak ? 1.5 : 1 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 300, damping: 10 }}>🔥 {streak}</motion.span>
+          <motion.span key={streak} className={`${streak >= 3 ? "hot" : ""} hot-lvl-${level}`} initial={{ scale: streak ? 1.6 : 1 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 300, damping: 10 }}>🔥 {streak}</motion.span>
         </div>
       </header>
 
@@ -259,7 +265,7 @@ export default function Game({ settings, duel, onQuit, onFinish }: Props) {
             {q.type === "draw-flag" ? text(settings.language, "drawFlag") : q.type === "map-country" ? text(settings.language, settings.mode === "country-map" ? "findCountry" : "tapCountry") : text(settings.language, PROMPT_KEYS[settings.mode])}
           </p>
 
-          {q.type === "draw-flag" && <FlagCanvas code={q.targetCode} onSubmit={submitDrawing} timeUp={drawTimeUp} clearLabel={text(settings.language, "clear")} submitLabel={text(settings.language, "submit")} />}
+          {q.type === "draw-flag" && <FlagCanvas code={q.targetCode} onSubmit={submitDrawing} timeUp={drawTimeUp} clearLabel={text(settings.language, "clear")} submitLabel={text(settings.language, "submit")} revealLabel={text(settings.language, "realFlag")} />}
           {q.type === "map-country" && <WorldMap targetCode={q.targetCode} countries={poolFor(settings.continent)} language={settings.language} selectedCode={selectedCode} revealed={revealed} onPick={pickMap} />}
           {q.type === "choices" && <div className={`answers ${q.options[0]?.flag ? "flags" : ""}`}>
             {q.options.map((option, optionIndex) => {
@@ -278,9 +284,10 @@ export default function Game({ settings, duel, onQuit, onFinish }: Props) {
           {waiting && <p className="waiting-note">⏳ {text(settings.language, "waitingForOthers")}</p>}
           <div className="feedback"><AnimatePresence>{revealed && <motion.p className={isCorrect ? "ok" : "bad"} initial={{ opacity: 0, scale: 0.6, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ type: "spring", stiffness: 300, damping: 15 }}>{feedback}</motion.p>}</AnimatePresence></div>
           {revealed && isCorrect && <Burst />}
-          {revealed && award && <PointsPopup award={award} streakLabel={text(settings.language, "streak")} />}
+          {revealed && award && <PointsPopup award={award} streakLabel={text(settings.language, "streak")} streakTitle={text(settings.language, `streakTitle${Math.max(1, level)}`)} />}
+          {learning && !revealDone && <button className="ghost skip-btn" onClick={() => setRevealDone(true)}>{text(settings.language, "continue")} →</button>}
         </motion.section>
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }

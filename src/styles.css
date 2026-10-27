@@ -258,6 +258,29 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 /* Multiplayer */
 .notice { color: var(--accent); margin: 0 0 16px; }
+
+.canvas-wrap { position: relative; }
+.flag-reveal { position: absolute; inset: 3px; width: calc(100% - 6px); height: calc(100% - 6px); object-fit: fill; border-radius: 9px; pointer-events: none; animation: reveal-pulse 1.6s ease-in-out infinite alternate; }
+@keyframes reveal-pulse { from { opacity: .35; } to { opacity: .9; } }
+.flag-reveal-label { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); padding: 4px 14px; border-radius: 99px; background: rgba(15,18,38,.85); font-size: .85rem; font-weight: 700; pointer-events: none; }
+.skip-btn { margin-top: 12px; }
+
+.fire-edge { position: fixed; left: 0; right: 0; bottom: 0; height: calc(10vh + var(--lvl, 1) * 5vh); display: flex; align-items: flex-end; pointer-events: none; z-index: -1; background: linear-gradient(to top, rgba(255,80,0,.5), rgba(255,160,0,.16) 60%, transparent); }
+.fire-edge span { flex: 1; margin: 0 -2%; background: radial-gradient(ellipse at 50% 100%, rgba(255,230,120,.95), rgba(255,120,0,.65) 38%, transparent 72%); border-radius: 50% 50% 0 0; transform-origin: 50% 100%; animation: fire-lick .8s ease-in-out infinite alternate; }
+@keyframes fire-lick { from { transform: scaleY(.7) scaleX(.95); opacity: .75; } to { transform: scaleY(1.15) scaleX(1.08); opacity: 1; } }
+.fire-edge.lvl-3 { filter: saturate(1.4) hue-rotate(-12deg); }
+.fire-edge.lvl-4 { filter: hue-rotate(190deg) saturate(1.6) brightness(1.15); }
+.hot-lvl-2 { text-shadow: 0 0 10px rgba(255,120,20,.9); }
+.hot-lvl-3 { text-shadow: 0 0 14px rgba(255,90,0,1), 0 0 28px rgba(255,60,0,.7); }
+.hot-lvl-4 { text-shadow: 0 0 14px rgba(90,170,255,1), 0 0 30px rgba(60,120,255,.8); color: #9fd0ff; }
+
+.streak-ring { position: absolute; left: 50%; top: 55px; width: 110px; height: 110px; margin: -55px 0 0 -55px; border-radius: 50%; border: 4px solid rgba(255,170,40,.9); box-shadow: 0 0 24px rgba(255,120,0,.8); }
+.streak-sparks { position: absolute; left: 50%; top: 55px; width: 0; height: 0; }
+.streak-sparks span { position: absolute; width: 7px; height: 7px; margin: -3px; border-radius: 50%; background: #ffd25a; box-shadow: 0 0 10px 3px rgba(255,150,30,.9); }
+.streak-title { position: absolute; left: 0; right: 0; top: 168px; font-size: clamp(1.5rem, 6vw, 2.2rem); font-weight: 900; letter-spacing: .04em; color: #fff; -webkit-text-stroke: 2px #c2410c; paint-order: stroke fill; text-shadow: 0 0 18px rgba(255,120,20,.95), 0 4px 12px rgba(0,0,0,.5); }
+.streak-flame.lvl-4 .streak-emoji, .streak-flame.lvl-4 .streak-sparks span { filter: hue-rotate(190deg) saturate(1.5) drop-shadow(0 0 30px rgba(80,160,255,1)); }
+.streak-flame.lvl-4 .streak-title { -webkit-text-stroke-color: #1d4ed8; text-shadow: 0 0 18px rgba(80,160,255,.95); }
+.streak-flame.lvl-4 .streak-ring { border-color: rgba(120,190,255,.9); box-shadow: 0 0 24px rgba(60,140,255,.8); }
 .opponent-hud { display: flex; align-items: center; justify-content: center; gap: 14px; margin: -14px 0 16px; padding: 6px 14px; background: var(--card); border: 1px solid var(--border); border-radius: 999px; font-size: .9rem; }
 .opp-name { font-weight: 600; }
 .radar { position: relative; width: 160px; height: 160px; margin: 20px auto; display: grid; place-items: center; }
@@ -302,7 +325,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 /* Streak flame */
 .points-pop { top: 28%; }
-.streak-flame { position: relative; width: 240px; height: 200px; margin: 0 auto; }
+.streak-flame { position: relative; width: 280px; height: 270px; margin: 0 auto; }
 .streak-rays { position: absolute; left: 50%; top: 52px; width: 0; height: 0; }
 .streak-rays span { position: absolute; left: -3px; top: -90px; width: 6px; height: 56px; border-radius: 4px; background: linear-gradient(180deg, rgba(255,200,87,.9), rgba(255,200,87,0)); transform-origin: 3px 90px; }
 .streak-icon { position: absolute; left: 0; right: 0; margin: 0 auto; top: 0; width: 110px; height: 110px; display: grid; place-items: center; }
@@ -311,7 +334,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .streak-number { position: absolute; bottom: 4px; font-size: 2.6rem; font-weight: 900; color: #fff; -webkit-text-stroke: 3px #c2410c; paint-order: stroke fill; text-shadow: 0 3px 10px rgba(0,0,0,.5); }
 .streak-embers { position: absolute; left: 0; right: 0; top: 40px; height: 60px; }
 .streak-embers span { position: absolute; font-size: 1.1rem; margin-left: -.55rem; }
-.streak-text { position: absolute; left: 0; right: 0; top: 140px; font-size: clamp(1.2rem, 4.5vw, 1.7rem); font-weight: 900; background: linear-gradient(180deg, #fff3a8, #ff9f1a 55%, #ff3d00); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 10px rgba(255,120,20,.8)); }
+.streak-text { position: absolute; left: 0; right: 0; top: 218px; font-size: clamp(1.2rem, 4.5vw, 1.7rem); font-weight: 900; background: linear-gradient(180deg, #fff3a8, #ff9f1a 55%, #ff3d00); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 10px rgba(255,120,20,.8)); }
 
 .opponent-hud { flex-wrap: wrap; border-radius: 18px; }
 .opp-chip { display: inline-flex; align-items: center; gap: 6px; }
